@@ -10,6 +10,10 @@ public class Driver {
 
     public static void main(String[] args) throws IOException {
 
+        Parser parser = new Parser();
+        ArrayList<String> instructions = parser.getInstructions();
 
+        TM tm = new TM(instructions);
+        tm.startProcessing();
     }
 }

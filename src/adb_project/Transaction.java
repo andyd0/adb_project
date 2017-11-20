@@ -6,26 +6,40 @@ public class Transaction {
     private Boolean readOnly;
     private Integer startTime;
     private Integer variable;
+    private Integer index;
+    private Boolean running;
 
-    public void transaction(Integer id, Boolean readOnly, Integer startTime, Integer variable) {
+    public Transaction(Integer id, Boolean readOnly, Integer startTime, Integer variable, Integer index) {
         this.id = id;
         this.readOnly = readOnly;
         this.startTime = startTime;
         this.variable = variable;
+        this.index = index;
+        this.running = true;
     }
 
-    public Integer getID () {
+    public Integer getID() {
         return id;
     }
-    public Integer getStartTime () {
+
+    public Boolean isReadOnly() {
+        return readOnly;
+    }
+
+    public Integer getStartTime() {
         return startTime;
     }
 
-    public Integer getVariable () {
+    public Integer getVariable() {
         return variable;
     }
 
-    public Boolean isReadOnly () {
-        return readOnly;
+    public Integer getIndex() {
+        return index;
     }
+
+    public void stopTransaction() {
+        this.running = false;
+    }
+
 }
