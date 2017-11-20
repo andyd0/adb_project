@@ -12,7 +12,7 @@ public class Variable {
         this.data = i * 10;
     }
 
-    public String getID() {
+    public String getId() {
         return this.id;
     }
 

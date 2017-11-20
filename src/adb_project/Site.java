@@ -5,38 +5,46 @@ import java.util.HashMap;
 public class Site {
 
     private int number;
-
-    // List of variables stored on this site
-    // Boolean indicates is variable is available on this site or not
-    // Evens at all sites, Odds only at (1 + index number mod 10)th site
     private HashMap<Variable, Boolean> variables;
-
-    // whether the site is running
     private boolean isUp;
 
-    public Site(int i) {
-      this.number = i;
-      this.variables = new HashMap<Variable, Boolean>();
+    public Site(int num) {
+        this.number = num;
+        this.isUp = true;
+        this.variables = new HashMap<Variable, Boolean>();
+
+        for (int i=1; i<=20; i++) {
+            Variable v = new Variable(i);
+
+            if (i%2 == 0) {
+                variables.put(v, true);
+            } else if ((1+i%10) == num) {
+                variables.put(v, true);
+            } else {
+                variables.put(v, false);
+            }
+        }
     }
 
     public String toString() {
         String result = "";
-        result += "This is site: " + this.number +"\n";
+        result += "This is site: " + number +"\n";
         return result;
     }
 
-    /* 
-      Need to think about locktable since EACH site will keep track of 
-      EACH active transaction and will maintain locks on EACH variable that
-      the transaction accesses
-
-      So probably a multi-level mapping:
-      Site -> multiple Transactions -> multiple Variables
-    */
-
-    /*
-    public void LockTable(Transaction T) {
-      lockTable.put(T.getID(), T.getVariable());
+    public Boolean hasVariable(Variable x) {
+        for (Variable v: variables.keySet()){
+            if (v.getId().equals(x.getId())) {
+                Boolean exists = variables.get(v);
+                if (exists) {
+                  return true;
+                }
+            }
+        }
+        return false;
     }
-    */
+
+    public Boolean isRunning() {
+      return isUp;
+    }
 }
