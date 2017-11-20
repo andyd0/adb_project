@@ -11,11 +11,8 @@ public class Parser {
         return instruction.split("[\\(\\,\\,\\)]");
     }
 
-    public ArrayList<String> getInstructions() throws IOException {
-
-        String cwd = System.getProperty("user.dir");
-
-        BufferedReader br = new BufferedReader(new FileReader(cwd + "/input/input_01.txt"));
+    public ArrayList<String> getInstructions(String path) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(path));
 
         ArrayList<String> instructions = new ArrayList<>();
         String instruction;
@@ -23,9 +20,9 @@ public class Parser {
         while (br.ready()) {
             instruction = br.readLine();
             instructions.add(instruction);
+            System.out.println("instruction: " + instruction);
         }
 
         return instructions;
-
     }
 }

@@ -3,33 +3,23 @@ package adb_project;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.File;
 import java.util.ArrayList;
 
 public class Driver {
     public static void main(String[] args) throws IOException {
-      /*
-
-      // DO NOT REMOVE
-      // Need this validation for passing files through command line
+      String path = "";
+      String cwd = System.getProperty("user.dir");
 
       if (args.length == 0) {
-        System.out.println("Please specify an input file. eg. java Driver"
-          + " /path/to/<test file>\n");
-
-        System.out.println("If you're running from the terminal: "
-          + " cd /src/ \n"
-          + "java -classpath . adb_project.Driver <test file>\n");
-
-        System.exit(0);
+        System.out.println("No test file specified in args, using path\n");
+        path = cwd + "/tests/input_01.txt";
+      } else {
+        path = cwd + "/" + args[0];
       }
 
-      // String path = args[0];
-      // Call Parser here with path (ie. filename)
-
-      */
-
       Parser parser = new Parser();
-      ArrayList<String> instructions = parser.getInstructions();
+      ArrayList<String> instructions = parser.getInstructions(path);
 
       TM tm = new TM(instructions);
       tm.startProcessing();
