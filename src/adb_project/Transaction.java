@@ -2,6 +2,7 @@ package adb_project;
 
 public class Transaction {
 
+    // TODO: Fileds will be updated once we write code for TM, DM
     private Integer id;
     private Boolean readOnly;
     private Integer startTime;
@@ -10,6 +11,7 @@ public class Transaction {
     private Boolean running;
 
     public Transaction(Integer id, Boolean readOnly, Integer startTime, Integer variable, Integer index) {
+
         this.id = id;
         this.readOnly = readOnly;
         this.startTime = startTime;
@@ -40,6 +42,14 @@ public class Transaction {
 
     public void stopTransaction() {
         this.running = false;
+    }
+
+    public String toString() {
+        String result = "\nTransaction: " + this.id + "\n";
+        result += "readOnly: " + this.readOnly + "\n";
+        result += "startTime: " + this.startTime + "\n";
+        result += "variable: " + this.variable + "\n";
+        return result;
     }
 
 }
