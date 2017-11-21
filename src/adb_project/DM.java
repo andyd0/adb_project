@@ -3,34 +3,28 @@ package adb_project;
 
 public class DM {
 
+    public DM() {
+
+    }
+
     public void handleInstruction(String[] instruction_split) {
 
         String instruction = instruction_split[0];
 
         switch (instruction) {
-            case "begin":
-                begin(instruction_split);
             case "W":
                 operations(instruction_split);
+                break;
             case "R":
                 operations(instruction_split);
-            case "end":
-                end(instruction_split);
+                break;
             case "fail":
                 fail(instruction_split);
+                break;
             case "recover":
                 recover(instruction_split);
-            case "dump":
-                dump(instruction_split);
+                break;
         }
-    }
-
-    public void begin(String[] instruction_split) {
-        
-    }
-
-    public void end(String[] instruction_split) {
-
     }
 
     public void operations(String[] instruction_split) {
@@ -38,14 +32,10 @@ public class DM {
     }
 
     public void fail(String[] instruction_split) {
-
+        Integer id = Integer.parseInt(instruction_split[1].replaceAll("\\D+",""));
     }
 
     public void recover(String[] instruction_split) {
-
-    }
-
-    public void dump(String[] instruction_split) {
-
+        Integer id = Integer.parseInt(instruction_split[1].replaceAll("\\D+",""));;
     }
 }

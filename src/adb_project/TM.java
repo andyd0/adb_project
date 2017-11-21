@@ -11,21 +11,13 @@ public class TM {
     public TM(ArrayList<String> instructions) {
         this.instructions = instructions;
         this.transactionsList = new ArrayList<>();
-        this.time = time;
     }
 
     public void addToTransactionList(Transaction T) {
         this.transactionsList.add(T);
     }
 
-    public void addTransaction(String[] tFields) {
-
-        Integer id = Integer.parseInt(tFields[0]);
-        Boolean readOnly = Boolean.getBoolean(tFields[1]);
-        Integer startTime = Integer.parseInt(tFields[2]);
-        Integer variable = Integer.parseInt(tFields[3]);
-        Integer index = Integer.parseInt(tFields[4]);
-
+    public void addTransaction(Integer id, Boolean readOnly, Integer startTime, Integer variable, Integer index) {
         Transaction T = new Transaction(id, readOnly, startTime, variable, index);
         addToTransactionList(T);
     }
@@ -46,8 +38,36 @@ public class TM {
         for(String instruction : instructions) {
             setTime();
             String[] instruction_split = parser.parseInstruction(instruction);
-            dm.handleInstruction(instruction_split);
-        }
+
+            switch (instruction_split[0]) {
+                case "begin":
+                    begin(instruction_split);
+                    break;
+                case "beginRO":
+                    begin(instruction_split);
+                    break;
+                case "end":
+                    end(instruction_split);
+                default:
+                    dm.handleInstruction(instruction_split);
+                    break;
+            }
+       }
     }
 
+    public void begin(String[] instruction_split) {
+
+        Integer startTime = getTime();
+        Integer id = Integer.parseInt(instruction_split[1].replaceAll("\\D+",""));
+        Boolean readOnly = instruction_split[0].contains("RO");
+        Integer variable = -1;
+        Integer index = -1;
+
+        addTransaction(id, readOnly, startTime, variable, index);
+    }
+
+    public void end(String[] instruction_split) {
+        Integer id = Integer.parseInt(instruction_split[1].replaceAll("\\D+",""));;
+        this.transactionsList.get(id).stopTransaction();
+    }
 }

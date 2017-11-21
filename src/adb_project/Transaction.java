@@ -36,8 +36,16 @@ public class Transaction {
         return variable;
     }
 
+    public void setVariable(Integer index) {
+        this.index = index;
+    }
+
     public Integer getIndex() {
         return index;
+    }
+
+    public void setIndex(Integer index) {
+        this.index = index;
     }
 
     public void stopTransaction() {
@@ -51,5 +59,4 @@ public class Transaction {
         result += "variable: " + this.variable + "\n";
         return result;
     }
-
 }
