@@ -2,6 +2,7 @@ package adb_project;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 public class Site {
     private int number;
@@ -105,14 +106,63 @@ public class Site {
         return res;
     }
 
+    public void updateVariable(String id, Integer value) {
+        for (Variable v: variables) {
+            if (id.equals(v.getId())) {
+                v.updateData(value);
+            }
+        }
+    }
+
     public boolean lockVariable(Transaction t, String varId, String lockType) {
         for (Variable v: lockTable.keySet()) {
             if (varId.equals(v.getId())) {
-                System.out.println("Locking variable: " + varId + " for Transaction: " + t.getID() + " with lock: " + lockType);
+                System.out.println("Locking variable: " + varId + " for Transaction: " +
+                  t.getID() + " with lock: " + lockType);
                 lockTable.get(v).put(t, lockType);
                 return true;
             }
         }
         return false;
+    }
+
+    public boolean unlockVariable(Transaction t, String varId) {
+        for (Variable v: lockTable.keySet()) {
+            if (varId.equals(v.getId())) {
+                System.out.println("Unlocking variable: " + varId + " for Transaction: " +
+                  t.getID());
+                lockTable.get(v).remove(t);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isVariableLocked(String varId) {
+        for (Variable v: lockTable.keySet()) {
+            if (varId.equals(v.getId())) {
+                Iterator<Transaction> iterator =
+                  lockTable.get(v).keySet().iterator();
+                if (iterator.hasNext()) {
+                    System.out.println("Transaction ID: " + iterator.next().getID() +
+                      " -> has a lock on: " + varId);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public Transaction getLockingTransaction(String varId) {
+        for (Variable v: lockTable.keySet()) {
+            if (varId.equals(v.getId())) {
+                Iterator<Transaction> iterator =
+                  lockTable.get(v).keySet().iterator();
+                if (iterator.hasNext()) {
+                    return iterator.next();
+                }
+            }
+        }
+        return null;
     }
 }
