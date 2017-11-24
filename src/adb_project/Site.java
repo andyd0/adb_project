@@ -39,7 +39,7 @@ public class Site {
 
     public String toString() {
         String result = "";
-        result += "This is site: " + number +"\n";
+        result += "Site: " + number;
         return result;
     }
 
@@ -87,23 +87,12 @@ public class Site {
 
     // get specific variable by supplying its id
     public Variable getVariable(String id) {
-        for (Variable v: variables) {
-            if (id.equals(v.getId())) {
-                return v;
-            }
-        }
-        return null;
+        return this.variables.get(Integer.parseInt(id));
     }
 
     // get variable's data by supplying its id
     public Integer getVariableData(String id) {
-        Integer res = 0;
-        for (Variable v: variables) {
-            if (id.equals(v.getId())) {
-                res = v.getData();
-            }
-        }
-        return res;
+        return this.variables.get(Integer.parseInt(id)).getData();
     }
 
     public void updateVariable(String id, Integer value) {

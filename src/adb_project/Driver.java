@@ -21,32 +21,32 @@ public class Driver {
       TM tm = new TM(instructions);
       tm.startProcessing();
 
-      // Sample code to create 5 transactions:
-      System.out.println("------------ Transactions ------------");
-      ArrayList<Transaction> transactions = new ArrayList<>();
-      for (int i=1; i<=10; i++) {
-        Transaction t = new Transaction(i, false, i, i, i);
-        System.out.println(t);
-      }
-
-      /*
-        TODO: This needs to be moved to the Site() constructor
-        since each site should be initialized with all the vars
-        Sample code creating 20 variables:
-      */
-      System.out.println("------------ Variables ------------");
-      for (int i=1; i<=20; i++) {
-        Variable v = new Variable(i);
-        System.out.println(v);
-      }
-
-      System.out.println("------------ Sites ------------\n");
-      // Sample code creating 10 sites
-      ArrayList<Site> sites = new ArrayList<>();
-      for (int i=1; i<=10; i++) {
-        Site s = new Site(i);
-        System.out.println(s);
-      }
+//      // Sample code to create 5 transactions:
+//      System.out.println("------------ Transactions ------------");
+//      ArrayList<Transaction> transactions = new ArrayList<>();
+//      for (int i=1; i<=10; i++) {
+//        Transaction t = new Transaction(i, false, i, i, i);
+//        System.out.println(t);
+//      }
+//
+//      /*
+//        TODO: This needs to be moved to the Site() constructor
+//        since each site should be initialized with all the vars
+//        Sample code creating 20 variables:
+//      */
+//      System.out.println("------------ Variables ------------");
+//      for (int i=1; i<=20; i++) {
+//        Variable v = new Variable(i);
+//        System.out.println(v);
+//      }
+//
+//      System.out.println("------------ Sites ------------\n");
+//      // Sample code creating 10 sites
+//      ArrayList<Site> sites = new ArrayList<>();
+//      for (int i=1; i<=10; i++) {
+//        Site s = new Site(i);
+//        System.out.println(s);
+//      }
     }
 }
 

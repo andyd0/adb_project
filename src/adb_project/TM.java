@@ -22,6 +22,10 @@ public class TM {
         addToTransactionList(T);
     }
 
+    public Transaction getTransaction(int id) {
+        return this.transactionsList.get(id);
+    }
+
     public void setTime() {
         this.time++;
     }
@@ -38,36 +42,68 @@ public class TM {
         for(String instruction : instructions) {
             setTime();
             String[] instruction_split = parser.parseInstruction(instruction);
+            String instruction_type = instruction_split[0];
+            Integer id;
+            Integer index;
 
             switch (instruction_split[0]) {
                 case "begin":
-                    begin(instruction_split);
+                    dm.addToHistory(this.time);
+                    id = ParseInt(instruction_split[1]);
+                    begin(instruction_type, id);
                     break;
                 case "beginRO":
-                    begin(instruction_split);
+                    dm.addToHistory(this.time);
+                    id = ParseInt(instruction_split[1]);
+                    begin(instruction_type, id);
+                    break;
+                case "W":
+                    id = ParseInt(instruction_split[1]);
+                    index = ParseInt(instruction_split[2]);
+                    Integer value = Integer.parseInt(instruction_split[3]);
+                    dm.write(this.getTransaction(id - 1), index, value, this.getTime());
+                    break;
+                case "R":
+                    id = ParseInt(instruction_split[1]);
+                    index = ParseInt(instruction_split[2]);
+                    dm.read(this.getTransaction(id - 1), index, this.getTime());
+                    break;
+                case "fail":
+                    dm.addToHistory(this.time);
+                    dm.fail(Integer.parseInt(instruction_split[1]));
+                    break;
+                case "recover":
+                    dm.addToHistory(this.time);
+                    dm.recover(Integer.parseInt(instruction_split[1]));
+                    break;
+                case "dump":
+                    dm.dump(instruction_split);
                     break;
                 case "end":
-                    end(instruction_split);
-                default:
-                    dm.handleInstruction(instruction_split);
+                    dm.addToHistory(this.time);
+                    id = ParseInt(instruction_split[1]);
+                    end(id);
                     break;
             }
        }
     }
 
-    public void begin(String[] instruction_split) {
+    public void begin(String instruction, Integer id) {
 
         Integer startTime = getTime();
-        Integer id = Integer.parseInt(instruction_split[1].replaceAll("\\D+",""));
-        Boolean readOnly = instruction_split[0].contains("RO");
+        Boolean readOnly = instruction.contains("RO");
         Integer variable = -1;
         Integer index = -1;
 
         addTransaction(id, readOnly, startTime, variable, index);
     }
 
-    public void end(String[] instruction_split) {
-        Integer id = Integer.parseInt(instruction_split[1].replaceAll("\\D+",""));;
-        this.transactionsList.get(id).stopTransaction();
+    public void end(Integer id) {
+        this.transactionsList.get(id - 1).stopTransaction();
     }
+
+    private Integer ParseInt(String T) {
+        return Integer.parseInt(T.replaceAll("\\D+",""));
+    }
+
 }
