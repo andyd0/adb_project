@@ -10,16 +10,16 @@ public class Driver {
 
       if (args.length == 0) {
         System.out.println("No test file specified in args, using path\n");
-        path = cwd + "/tests/input_01.txt";
+        path = cwd + "/tests/input_02.txt";
       } else {
         path = cwd + "/" + args[0];
       }
 
       Parser parser = new Parser();
-      ArrayList<String> instructions = parser.getInstructions(path);
+      ArrayList<Instruction> instructions = parser.getInstructions(path);
 
       TM tm = new TM(instructions);
-      tm.startProcessing();
+      tm.processInstructions();
 
 //      // Sample code to create 5 transactions:
 //      System.out.println("------------ Transactions ------------");

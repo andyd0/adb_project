@@ -1,5 +1,9 @@
 package adb_project;
 
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
+
 public class Transaction {
 
     // TODO: Fileds will be updated once we write code for TM, DM
@@ -9,8 +13,16 @@ public class Transaction {
     private Integer variable;
     private Integer index;
     private Boolean running;
+    private Queue<Integer> variablesLocked;
+    private Instruction currentInstruction;
 
-    public Transaction(Integer id, Boolean readOnly, Integer startTime, Integer variable, Integer index) {
+    // variablesLocked is a queue keeping track of the variables that the transaction
+    // has locked
+    // currentInstructions is a queue so that when the transaction is unblocked the instructions
+    // are executed
+
+    public Transaction(Integer id, Boolean readOnly, Integer startTime,
+                       Integer variable, Integer index, Instruction instruction) {
 
         this.id = id;
         this.readOnly = readOnly;
@@ -18,6 +30,8 @@ public class Transaction {
         this.variable = variable;
         this.index = index;
         this.running = true;
+        this.variablesLocked = new LinkedList<>();
+        this.currentInstruction = instruction;
     }
 
     public Integer getID() {
@@ -32,20 +46,19 @@ public class Transaction {
         return startTime;
     }
 
-    public Integer getVariable() {
-        return variable;
+    public void addCurrentInstruction(Instruction instruction) {
+        currentInstruction = instruction;
     }
 
-    public void setVariable(Integer index) {
-        this.index = index;
+    public Instruction getCurrentInstruction() {
+        return currentInstruction;
     }
 
-    public Integer getIndex() {
-        return index;
+    public void addLockedVariable(Integer variable) {
+        variablesLocked.add(variable);
     }
-
-    public void setIndex(Integer index) {
-        this.index = index;
+    public Queue<Integer> getVariablesLocked() {
+        return variablesLocked;
     }
 
     public void stopTransaction() {

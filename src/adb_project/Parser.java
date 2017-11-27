@@ -7,22 +7,39 @@ import java.util.ArrayList;
 
 public class Parser {
 
-    public String[] parseInstruction (String instruction)  {
+    private Integer parseInt(String T) {
+        return Integer.parseInt(T.replaceAll("\\D+",""));
+    }
+
+    private String[] parseInstruction (String instruction)  {
         return instruction.split("[\\(\\,\\,\\)]");
     }
 
-    public ArrayList<String> getInstructions(String path) throws IOException {
+    public ArrayList<Instruction> getInstructions(String path) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(path));
 
-        ArrayList<String> instructions = new ArrayList<>();
-        String instruction;
+        ArrayList<Instruction> instructions = new ArrayList<>();
+        String line;
 
         while (br.ready()) {
-            instruction = br.readLine();
+            line = br.readLine();
+            String[] temp = parseInstruction(line);
+            Instruction instruction;
+
+            if(temp[0].equals("R")) {
+                instruction = new Instruction(temp[0], parseInt(temp[1]), parseInt(temp[2]), null);
+            } else if(temp[0].equals("W")) {
+                instruction = new Instruction(temp[0], parseInt(temp[1]), parseInt(temp[2]), Integer.parseInt(temp[3]));
+            } else if(temp.length == 1) {
+                instruction = new Instruction(temp[0], null, null, null);
+            } else {
+                instruction = new Instruction(temp[0], parseInt(temp[1]), null, null);
+            }
+
             instructions.add(instruction);
-            System.out.println("instruction: " + instruction);
         }
 
         return instructions;
     }
+
 }

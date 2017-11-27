@@ -4,11 +4,11 @@ import java.util.ArrayList;
 
 public class TM {
 
-    private ArrayList<String> instructions;
+    private ArrayList<Instruction> instructions;
     private ArrayList<Transaction> transactionsList;
-    private Integer time = 0;
+    private static Integer time = 0;
 
-    public TM(ArrayList<String> instructions) {
+    public TM(ArrayList<Instruction> instructions) {
         this.instructions = instructions;
         this.transactionsList = new ArrayList<>();
     }
@@ -17,8 +17,9 @@ public class TM {
         this.transactionsList.add(T);
     }
 
-    public void addTransaction(Integer id, Boolean readOnly, Integer startTime, Integer variable, Integer index) {
-        Transaction T = new Transaction(id, readOnly, startTime, variable, index);
+    public void addTransaction(Integer id, Boolean readOnly, Integer startTime,
+                               Integer variable, Integer index, Instruction instruction) {
+        Transaction T = new Transaction(id, readOnly, startTime, variable, index, instruction);
         addToTransactionList(T);
     }
 
@@ -27,83 +28,77 @@ public class TM {
     }
 
     public void setTime() {
-        this.time++;
+        time++;
     }
 
-    public Integer getTime() {
-        return this.time;
+    public static Integer getTime() {
+        return time;
     }
 
-    public void startProcessing() {
-        ArrayList<String> instructions = this.instructions;
-        Parser parser = new Parser();
+    public void processInstructions() {
+        ArrayList<Instruction> instructions = this.instructions;
         DM dm = new DM();
 
-        for(String instruction : instructions) {
-            setTime();
-            String[] instruction_split = parser.parseInstruction(instruction);
-            String instruction_type = instruction_split[0];
-            Integer id;
-            Integer index;
+        Parser parser = new Parser();
 
-            switch (instruction_split[0]) {
+        for(Instruction instruction : instructions) {
+            setTime();
+            String instruction_type = instruction.getInstruction();
+            Integer id;
+            Integer variable;
+            Transaction transaction;
+
+            switch (instruction_type) {
                 case "begin":
-                    dm.addToHistory(this.time);
-                    id = ParseInt(instruction_split[1]);
-                    begin(instruction_type, id);
+                    dm.addToHistory(time);
+                    begin(instruction);
                     break;
                 case "beginRO":
-                    dm.addToHistory(this.time);
-                    id = ParseInt(instruction_split[1]);
-                    begin(instruction_type, id);
+                    dm.addToHistory(time);
+                    begin(instruction);
                     break;
                 case "W":
-                    id = ParseInt(instruction_split[1]);
-                    index = ParseInt(instruction_split[2]);
-                    Integer value = Integer.parseInt(instruction_split[3]);
-                    dm.write(this.getTransaction(id - 1), index, value, this.getTime());
+                    id = instruction.getID();
+                    variable = instruction.getVariable();
+                    transaction = this.getTransaction(id - 1);
+                    transaction.addCurrentInstruction(instruction);
+                    Integer value = instruction.getValue();
+                    dm.write(transaction, variable, value, getTime());
                     break;
                 case "R":
-                    id = ParseInt(instruction_split[1]);
-                    index = ParseInt(instruction_split[2]);
-                    dm.read(this.getTransaction(id - 1), index, this.getTime());
+                    id = instruction.getID();
+                    variable = instruction.getVariable();
+                    transaction = this.getTransaction(id - 1);
+                    transaction.addCurrentInstruction(instruction);
+                    dm.read(transaction, variable, getTime());
                     break;
                 case "fail":
-                    dm.addToHistory(this.time);
-                    dm.fail(Integer.parseInt(instruction_split[1]));
+                    dm.addToHistory(time);
+                    dm.fail(instruction);
                     break;
                 case "recover":
-                    dm.addToHistory(this.time);
-                    dm.recover(Integer.parseInt(instruction_split[1]));
+                    dm.addToHistory(time);
+                    dm.recover(instruction);
                     break;
                 case "dump":
-                    dm.dump(instruction_split);
+                    dm.dump(instruction);
                     break;
                 case "end":
-                    dm.addToHistory(this.time);
-                    id = ParseInt(instruction_split[1]);
-                    end(id);
+                    id = instruction.getID();
+                    dm.end(this.getTransaction(id - 1));
                     break;
             }
-       }
+        }
     }
 
-    public void begin(String instruction, Integer id) {
+    public void begin(Instruction instruction) {
 
         Integer startTime = getTime();
-        Boolean readOnly = instruction.contains("RO");
-        Integer variable = -1;
-        Integer index = -1;
+        Integer transaction = instruction.getID();
+        Boolean readOnly = instruction.getInstruction().contains("RO");
+        Integer variable = null;
+        Integer index = null;
 
-        addTransaction(id, readOnly, startTime, variable, index);
+        addTransaction(transaction, readOnly, startTime, variable, index, instruction);
     }
-
-    public void end(Integer id) {
-        this.transactionsList.get(id - 1).stopTransaction();
-    }
-
-    private Integer ParseInt(String T) {
-        return Integer.parseInt(T.replaceAll("\\D+",""));
-    }
-
 }

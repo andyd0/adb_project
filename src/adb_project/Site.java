@@ -1,8 +1,6 @@
 package adb_project;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.*;
 
 public class Site {
     private int number;
@@ -16,24 +14,26 @@ public class Site {
 
       This looks like [Variable -> [TransactionID, WriteLock]]
     */
-    private HashMap<Variable, HashMap<Transaction, String>> lockTable;
+    private HashMap<Integer, HashMap<Transaction, String>> lockTable;
+    private HashMap<Integer, Queue<Transaction>> lockQueue;
     private boolean isRunning;
 
     public Site(int num) {
         this.number = num;
         this.isRunning = true;
-        this.variables = new ArrayList<Variable>();
-        this.lockTable = new HashMap<Variable, HashMap<Transaction, String>>();
+        this.variables = new ArrayList<>();
+        this.lockTable = new HashMap<>();
+        this.lockQueue = new HashMap<>();
 
-        for (int i=1; i<=20; i++) {
+        for (int i = 1; i <= 20; i++) {
             Variable v = new Variable(i);
 
-            if (i%2 == 0) {
+            if (i % 2 == 0) {
                 variables.add(v);
-            } else if ((1+i%10) == num) {
+            } else if ((1 + i % 10) == num) {
                 variables.add(v);
             }
-            lockTable.put(v, new HashMap<Transaction, String>());
+            lockTable.put(i, new HashMap<>());
         }
     }
 
@@ -48,12 +48,11 @@ public class Site {
         return this.isRunning;
     }
 
-    public void fail() {
+    // Handles setting the failed / recover state of the site
+    // Methods for recover / fail are at the DM now
 
-    }
-
-    public void recover() {
-
+    public void setSiteState(Boolean state) {
+        this.isRunning = state;
     }
 
     public int getSiteNum() {
@@ -103,55 +102,56 @@ public class Site {
         }
     }
 
-    public boolean lockVariable(Transaction t, String varId, String lockType) {
-        for (Variable v: lockTable.keySet()) {
-            if (varId.equals(v.getId())) {
-                System.out.println("Locking variable: " + varId + " for Transaction: " +
-                  t.getID() + " with lock: " + lockType);
-                lockTable.get(v).put(t, lockType);
-                return true;
-            }
-        }
-        return false;
+    public void lockVariable(Transaction t, Integer varId, String lockType) {
+            lockTable.get(varId).put(t, lockType);
     }
 
-    public boolean unlockVariable(Transaction t, String varId) {
-        for (Variable v: lockTable.keySet()) {
-            if (varId.equals(v.getId())) {
-                System.out.println("Unlocking variable: " + varId + " for Transaction: " +
-                  t.getID());
-                lockTable.get(v).remove(t);
-                return true;
-            }
-        }
-        return false;
+    public void unlockVariable(Transaction t, Integer varId) {
+            lockTable.get(varId).remove(t);
     }
 
-    public boolean isVariableLocked(String varId) {
-        for (Variable v: lockTable.keySet()) {
-            if (varId.equals(v.getId())) {
-                Iterator<Transaction> iterator =
-                  lockTable.get(v).keySet().iterator();
-                if (iterator.hasNext()) {
-                    System.out.println("Transaction ID: " + iterator.next().getID() +
-                      " -> has a lock on: " + varId);
-                    return true;
-                }
-            }
-        }
-        return false;
+    public void handleLockQueue(Integer variable) {
+        lockQueue.get(variable).remove();
+
     }
 
-    public Transaction getLockingTransaction(String varId) {
-        for (Variable v: lockTable.keySet()) {
-            if (varId.equals(v.getId())) {
-                Iterator<Transaction> iterator =
-                  lockTable.get(v).keySet().iterator();
-                if (iterator.hasNext()) {
-                    return iterator.next();
-                }
-            }
+
+    public void addToLockQueue(Integer variable, Transaction transaction) {
+        if(lockQueue.get(variable) == null) {
+            Queue<Transaction> queue = new LinkedList<>();
+            queue.add(transaction);
+            lockQueue.put(variable, queue);
+        } else {
+            lockQueue.get(variable).add(transaction);
         }
-        return null;
     }
+
+    public Transaction getFromLockQueue(Integer variable) {
+        return lockQueue.get(variable).remove();
+    }
+
+    public boolean isVariableLocked(Integer varId) {
+        if(lockTable.get(varId).size() == 0) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public void clearLocktable() {
+        this.lockTable = new HashMap<>();
+    }
+
+//    public Transaction getLockingTransaction(String varId) {
+//        for (Variable v: lockTable.keySet()) {
+//            if (varId.equals(v.getId())) {
+//                Iterator<Transaction> iterator =
+//                  lockTable.get(v).keySet().iterator();
+//                if (iterator.hasNext()) {
+//                    return iterator.next();
+//                }
+//            }
+//        }
+//        return null;
+//    }
 }
