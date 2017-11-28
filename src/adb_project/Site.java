@@ -12,10 +12,9 @@ public class Site {
       a tuple-like record created using a single record hashmap.
 
 
-      This looks like [Variable -> [TransactionID, WriteLock]]
+      This looks like [Variable -> [TransactionID, Instruction]]
     */
-    private HashMap<Integer, HashMap<Transaction, String>> lockTable;
-    private HashMap<Integer, Queue<Transaction>> lockQueue;
+    private HashMap<String, HashMap<Transaction, Instruction>> lockTable;
     private boolean isRunning;
 
     public Site(int num) {
@@ -23,7 +22,6 @@ public class Site {
         this.isRunning = true;
         this.variables = new HashMap<>();
         this.lockTable = new HashMap<>();
-        this.lockQueue = new HashMap<>();
 
         for (int i = 1; i <= 20; i++) {
             Variable v = new Variable(i);
@@ -33,7 +31,7 @@ public class Site {
             } else if ((1 + i % 10) == num) {
                 variables.put("x" + i, v);
             }
-            lockTable.put(i, new HashMap<>());
+            lockTable.put("x" + i, new HashMap<>());
         }
     }
 
@@ -95,34 +93,22 @@ public class Site {
         this.variables.get(id).updateData(value);
     }
 
-    public void lockVariable(Transaction t, Integer varId, String lockType) {
-            lockTable.get(varId).put(t, lockType);
+    public void lockVariable(Transaction t, String varId, Instruction instruction) {
+        lockTable.get(varId).put(t, instruction);
     }
 
-    public void unlockVariable(Transaction t, Integer varId) {
-            lockTable.get(varId).remove(t);
-    }
-
-    public void handleLockQueue(Integer variable) {
-        lockQueue.get(variable).remove();
-
-    }
-
-    public void addToLockQueue(Integer variable, Transaction transaction) {
-        if(lockQueue.get(variable) == null) {
-            Queue<Transaction> queue = new LinkedList<>();
-            queue.add(transaction);
-            lockQueue.put(variable, queue);
-        } else {
-            lockQueue.get(variable).add(transaction);
+    // When a transaction commits, checks to see if it was a write
+    // instruction and updates value.  For both R/W it will remove
+    // from lock queue
+    public void handleLockTable(Transaction t, String varId) {
+        Instruction instruction = lockTable.get(varId).get(t);
+        if(instruction.getInstruction().equals("W")) {
+            updateVariable(varId, instruction.getValue());
         }
+        lockTable.get(varId).remove(t);
     }
 
-    public Transaction getFromLockQueue(Integer variable) {
-        return lockQueue.get(variable).remove();
-    }
-
-    public boolean isVariableLocked(Integer varId) {
+    public boolean isVariableLocked(String varId) {
         if(lockTable.get(varId).size() == 0) {
             return false;
         } else {

@@ -7,6 +7,8 @@ public class Variable {
     private int previousValue;
 
     // Each variable xi should be initialized to the value 10i
+    // Variable also holds previous value.
+    // TODO:  Will this be enough for multiread?
     public Variable(int i) {
         this.id = "x" + Integer.toString(i);
         this.index = i;

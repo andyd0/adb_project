@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 public class Driver {
     public static void main(String[] args) throws IOException {
-      String path = "";
+      String path;
       String cwd = System.getProperty("user.dir");
 
       if (args.length == 0) {

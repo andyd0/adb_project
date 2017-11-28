@@ -1,16 +1,21 @@
 package adb_project;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class TM {
 
     private ArrayList<Instruction> instructions;
     private ArrayList<Transaction> transactionsList;
+    private static HashMap<String, Queue<Transaction>> lockQueue;
     private static Integer time = 0;
 
     public TM(ArrayList<Instruction> instructions) {
         this.instructions = instructions;
         this.transactionsList = new ArrayList<>();
+        this.lockQueue = new HashMap<>();
     }
 
     public void addToTransactionList(Transaction T) {
@@ -90,8 +95,30 @@ public class TM {
         Integer startTime = getTime();
         Integer transaction = instruction.getID();
         Boolean readOnly = instruction.getInstruction().contains("RO");
-        Integer variable = null;
 
-        addTransaction(transaction, readOnly, startTime, variable, instruction);
+        addTransaction(transaction, readOnly, startTime, null, instruction);
     }
+
+    public static Transaction handleLockQueue(String variable) {
+            if(lockQueue.get(variable).size() == 0) {
+                return null;
+            } else {
+                return lockQueue.get(variable).remove();
+            }
+    }
+
+    public static void addToLockQueue(String variable, Transaction transaction) {
+        if(lockQueue.get(variable) == null) {
+            Queue<Transaction> queue = new LinkedList<>();
+            queue.add(transaction);
+            lockQueue.put(variable, queue);
+        } else {
+            lockQueue.get(variable).add(transaction);
+        }
+    }
+
+    public static Boolean emptyLockQueue(String variable) {
+        return (lockQueue.get(variable) == null || lockQueue.get(variable).size() == 0);
+    }
+
 }
