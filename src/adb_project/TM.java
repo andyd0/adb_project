@@ -18,8 +18,8 @@ public class TM {
     }
 
     public void addTransaction(Integer id, Boolean readOnly, Integer startTime,
-                               Integer variable, Integer index, Instruction instruction) {
-        Transaction T = new Transaction(id, readOnly, startTime, variable, index, instruction);
+                               Integer variable, Instruction instruction) {
+        Transaction T = new Transaction(id, readOnly, startTime, variable, instruction);
         addToTransactionList(T);
     }
 
@@ -35,11 +35,11 @@ public class TM {
         return time;
     }
 
+    // Instructions handled by the DM are sent to the DM.  Otherwise,
+    // TM handles.
     public void processInstructions() {
         ArrayList<Instruction> instructions = this.instructions;
         DM dm = new DM();
-
-        Parser parser = new Parser();
 
         for(Instruction instruction : instructions) {
             setTime();
@@ -50,34 +50,27 @@ public class TM {
 
             switch (instruction_type) {
                 case "begin":
-                    dm.addToHistory(time);
                     begin(instruction);
                     break;
                 case "beginRO":
-                    dm.addToHistory(time);
                     begin(instruction);
                     break;
                 case "W":
                     id = instruction.getID();
-                    variable = instruction.getVariable();
                     transaction = this.getTransaction(id - 1);
                     transaction.addCurrentInstruction(instruction);
-                    Integer value = instruction.getValue();
-                    dm.write(transaction, variable, value, getTime());
+                    dm.write(transaction, instruction);
                     break;
                 case "R":
                     id = instruction.getID();
-                    variable = instruction.getVariable();
                     transaction = this.getTransaction(id - 1);
                     transaction.addCurrentInstruction(instruction);
-                    dm.read(transaction, variable, getTime());
+                    dm.read(transaction, instruction);
                     break;
                 case "fail":
-                    dm.addToHistory(time);
                     dm.fail(instruction);
                     break;
                 case "recover":
-                    dm.addToHistory(time);
                     dm.recover(instruction);
                     break;
                 case "dump":
@@ -91,14 +84,14 @@ public class TM {
         }
     }
 
+    // Creates the transaction
     public void begin(Instruction instruction) {
 
         Integer startTime = getTime();
         Integer transaction = instruction.getID();
         Boolean readOnly = instruction.getInstruction().contains("RO");
         Integer variable = null;
-        Integer index = null;
 
-        addTransaction(transaction, readOnly, startTime, variable, index, instruction);
+        addTransaction(transaction, readOnly, startTime, variable, instruction);
     }
 }

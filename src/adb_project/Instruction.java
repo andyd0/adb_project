@@ -1,5 +1,9 @@
 package adb_project;
 
+// So that parsing can be handled completely with the parser and simplify
+// passing around of instruction information, a class was created with the
+// required fields.
+
 public class Instruction {
 
     private String instruction;

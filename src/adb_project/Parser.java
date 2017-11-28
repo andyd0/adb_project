@@ -7,14 +7,17 @@ import java.util.ArrayList;
 
 public class Parser {
 
-    private Integer parseInt(String T) {
+    // Gets the number from a string
+    public Integer parseInt(String T) {
         return Integer.parseInt(T.replaceAll("\\D+",""));
     }
 
+    // Breaks up an input line
     private String[] parseInstruction (String instruction)  {
         return instruction.split("[\\(\\,\\,\\)]");
     }
 
+    // Reads in the input
     public ArrayList<Instruction> getInstructions(String path) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(path));
 

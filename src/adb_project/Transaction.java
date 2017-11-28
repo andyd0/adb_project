@@ -11,7 +11,6 @@ public class Transaction {
     private Boolean readOnly;
     private Integer startTime;
     private Integer variable;
-    private Integer index;
     private Boolean running;
     private Queue<Integer> variablesLocked;
     private Instruction currentInstruction;
@@ -21,14 +20,12 @@ public class Transaction {
     // currentInstructions is a queue so that when the transaction is unblocked the instructions
     // are executed
 
-    public Transaction(Integer id, Boolean readOnly, Integer startTime,
-                       Integer variable, Integer index, Instruction instruction) {
+    public Transaction(Integer id, Boolean readOnly, Integer startTime, Integer variable, Instruction instruction) {
 
         this.id = id;
         this.readOnly = readOnly;
         this.startTime = startTime;
         this.variable = variable;
-        this.index = index;
         this.running = true;
         this.variablesLocked = new LinkedList<>();
         this.currentInstruction = instruction;

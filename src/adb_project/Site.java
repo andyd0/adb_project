@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Site {
     private int number;
-    private ArrayList<Variable> variables;
+    private HashMap<String, Variable> variables;
 
     /*
       Java doesn't have tuple types so using a hashmap to emulate it:
@@ -21,7 +21,7 @@ public class Site {
     public Site(int num) {
         this.number = num;
         this.isRunning = true;
-        this.variables = new ArrayList<>();
+        this.variables = new HashMap<>();
         this.lockTable = new HashMap<>();
         this.lockQueue = new HashMap<>();
 
@@ -29,9 +29,9 @@ public class Site {
             Variable v = new Variable(i);
 
             if (i % 2 == 0) {
-                variables.add(v);
+                variables.put("x" + i, v);
             } else if ((1 + i % 10) == num) {
-                variables.add(v);
+                variables.put("x" + i, v);
             }
             lockTable.put(i, new HashMap<>());
         }
@@ -61,8 +61,10 @@ public class Site {
 
     // check if variable exists on this site by supplying variable object
     public Boolean hasVariable(Variable x) {
-        for (Variable v: variables) {
-            if (x.getId().equals(v.getId())) {
+
+        for (HashMap.Entry<String, Variable> entry : this.variables.entrySet())
+        {
+            if(x.getId().equals(entry.getValue().getId())) {
                 return true;
             }
         }
@@ -71,35 +73,26 @@ public class Site {
 
     // check if variable exists on this site by supplying variable id
     public Boolean hasVariable(String id) {
-        for (Variable v: variables) {
-            if (id.equals(v.getId())) {
-                return true;
-            }
-        }
-        return false;
+        return (this.variables.get(id) == null);
     }
 
     // get all variables on this site
-    public ArrayList<Variable> getAllVariables() {
+    public HashMap<String, Variable> getAllVariables() {
         return this.variables;
     }
 
     // get specific variable by supplying its id
     public Variable getVariable(String id) {
-        return this.variables.get(Integer.parseInt(id));
+        return this.variables.get(id);
     }
 
     // get variable's data by supplying its id
     public Integer getVariableData(String id) {
-        return this.variables.get(Integer.parseInt(id)).getData();
+        return this.variables.get(id).getData();
     }
 
     public void updateVariable(String id, Integer value) {
-        for (Variable v: variables) {
-            if (id.equals(v.getId())) {
-                v.updateData(value);
-            }
-        }
+        this.variables.get(id).updateData(value);
     }
 
     public void lockVariable(Transaction t, Integer varId, String lockType) {
@@ -114,7 +107,6 @@ public class Site {
         lockQueue.get(variable).remove();
 
     }
-
 
     public void addToLockQueue(Integer variable, Transaction transaction) {
         if(lockQueue.get(variable) == null) {
