@@ -33,4 +33,14 @@ public class Instruction {
     public Integer getValue() {
         return value;
     }
+
+    public String toString() {
+        String result = "------\n";
+        result += "\ninstruction: " + this.instruction;
+        result += "\nid: " + this.id;
+        result += "\nvariable: " + this.variable;
+        result += "\nvalue: " + this.value;
+        result += "\n------";
+        return result;
+    }
 }
