@@ -172,9 +172,7 @@ public class DM {
                     site.lockVariable(T, variable, instruction);
                     value = site.getVariable(variable).getData();
                     T.addLockedVariable(index);
-
-                    System.out.println(transactionID +" wrote to " + variable + " at Site " +
-                            sites.get(0).getSiteNum() + ": " + value.toString());
+                    System.out.println(transactionID + " read " + variable + ": " + value.toString());
                 }
             } else {
                 TM.addToWaitQueue(siteID, T);
