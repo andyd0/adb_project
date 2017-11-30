@@ -1,10 +1,12 @@
 package adb_project;
 
+import java.util.HashMap;
+
 public class Variable {
     private String id;
     private int index;
     private int data;
-    private int previousValue;
+    private HashMap<Integer, Integer> previousValues;
 
     // Each variable xi should be initialized to the value 10i
     // Variable also holds previous value.
@@ -13,7 +15,13 @@ public class Variable {
         this.id = "x" + Integer.toString(i);
         this.index = i;
         this.data = i * 10;
-        this.previousValue = i * 10;
+        this.previousValues = initializePrevValues(i);
+    }
+
+    private HashMap<Integer, Integer> initializePrevValues(int i) {
+        HashMap<Integer, Integer> temp = new HashMap<>();
+        temp.put(1, i * 10);
+        return temp;
     }
 
     public String getId() {
@@ -24,16 +32,25 @@ public class Variable {
         return this.data;
     }
 
-    public int getPreviousValue() {
-        return this.previousValue;
+    public int getPreviousValue(Integer time) {
+
+        HashMap<Integer, Integer> temp = this.previousValues;
+        Integer value = -1;
+
+        for (HashMap.Entry<Integer, Integer> entry : temp.entrySet()) {
+            if (time > entry.getKey()) {
+                value = entry.getValue();
+            }
+        }
+        return value;
     }
 
     public int getIndex() {
         return this.index;
     }
 
-    public void updateData(int val) {
-        this.previousValue = this.data;
+    public void updateData(int val, int time) {
+        this.previousValues.put(time, val);
         this.data = val;
     }
 

@@ -1,31 +1,40 @@
 package adb_project;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.Queue;
+
+class TComparator implements Comparator<Transaction>{
+    public int compare(Transaction a, Transaction b) {
+        return a.getLockTime().compareTo(b.getLockTime());
+    }
+}
 
 public class TM {
 
     private ArrayList<Instruction> instructions;
-    private ArrayList<Transaction> transactionsList;
-    private static HashMap<String, Queue<Transaction>> lockQueue;
+    private HashMap<Integer, Transaction> transactionsList;
+    private static HashMap<String, PriorityQueue<Transaction>> lockQueue;
+    private static HashMap<Integer, Queue<Transaction>> waitQueue;
     private static Integer time = 0;
 
     public TM(ArrayList<Instruction> instructions) {
         this.instructions = instructions;
-        this.transactionsList = new ArrayList<>();
+        this.transactionsList = new HashMap<>();
         this.lockQueue = new HashMap<>();
-    }
-
-    public void addToTransactionList(Transaction T) {
-        this.transactionsList.add(T);
+        this.waitQueue = new HashMap<>();
     }
 
     public void addTransaction(Integer id, Boolean readOnly, Integer startTime,
                                Integer variable, Instruction instruction) {
         Transaction T = new Transaction(id, readOnly, startTime, variable, instruction);
-        addToTransactionList(T);
+        addToTransactionList(id, T);
+    }
+
+    public void addToTransactionList(Integer id, Transaction T) {
+        this.transactionsList.put(id, T);
     }
 
     public Transaction getTransaction(int id) {
@@ -50,7 +59,6 @@ public class TM {
             setTime();
             String instruction_type = instruction.getInstruction();
             Integer id;
-            Integer variable;
             Transaction transaction;
 
             switch (instruction_type) {
@@ -62,13 +70,13 @@ public class TM {
                     break;
                 case "W":
                     id = instruction.getID();
-                    transaction = this.getTransaction(id - 1);
+                    transaction = this.getTransaction(id);
                     transaction.addCurrentInstruction(instruction);
                     dm.write(transaction, instruction);
                     break;
                 case "R":
                     id = instruction.getID();
-                    transaction = this.getTransaction(id - 1);
+                    transaction = this.getTransaction(id);
                     transaction.addCurrentInstruction(instruction);
                     dm.read(transaction, instruction);
                     break;
@@ -83,9 +91,10 @@ public class TM {
                     break;
                 case "end":
                     id = instruction.getID();
-                    dm.end(this.getTransaction(id - 1));
+                    dm.end(this.getTransaction(id));
                     break;
             }
+            incrementLockTimes();
         }
     }
 
@@ -100,16 +109,17 @@ public class TM {
     }
 
     public static Transaction handleLockQueue(String variable) {
-            if(lockQueue.get(variable).size() == 0) {
-                return null;
-            } else {
-                return lockQueue.get(variable).remove();
-            }
+        if(lockQueue.get(variable).size() == 0) {
+            return null;
+        } else {
+            return lockQueue.get(variable).remove();
+        }
     }
 
     public static void addToLockQueue(String variable, Transaction transaction) {
+        transaction.setLockTime();
         if(lockQueue.get(variable) == null) {
-            Queue<Transaction> queue = new LinkedList<>();
+            PriorityQueue<Transaction> queue = new PriorityQueue<>(new TComparator());
             queue.add(transaction);
             lockQueue.put(variable, queue);
         } else {
@@ -117,8 +127,37 @@ public class TM {
         }
     }
 
+    public static String peekLockQueue(String variable) {
+        if(lockQueue.get(variable).peek() == null) {
+            return "N";
+        } else {
+            return lockQueue.get(variable).peek().getCurrentInstruction().getInstruction();
+        }
+    }
+
+    public static void addToWaitQueue(Integer siteId, Transaction transaction) {
+        if(waitQueue.get(siteId) == null) {
+            Queue<Transaction> queue = new PriorityQueue<>();
+            queue.add(transaction);
+            waitQueue.put(siteId, queue);
+        } else {
+            waitQueue.get(siteId).add(transaction);
+        }
+    }
+
+    public static Transaction getFromWaitQueue(Integer siteId) {
+        if(waitQueue.get(siteId).size() == 0) {
+            return null;
+        } else {
+            return waitQueue.get(siteId).remove();
+        }
+    }
+
     public static Boolean emptyLockQueue(String variable) {
         return (lockQueue.get(variable) == null || lockQueue.get(variable).size() == 0);
     }
 
+    private void incrementLockTimes() {
+
+    }
 }

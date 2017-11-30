@@ -3,6 +3,7 @@ package adb_project;
 import java.util.*;
 
 public class Site {
+
     private int number;
     private HashMap<String, Variable> variables;
 
@@ -13,13 +14,17 @@ public class Site {
 
 
       This looks like [Variable -> [TransactionID, Instruction]]
+
+      TODO: State for a site is 4 - failed, recovered, recovered and written to and running.  Handle with string?
+
+      States: "running", "failed", "recovered", "recovered_written"
     */
     private HashMap<String, HashMap<Transaction, Instruction>> lockTable;
-    private boolean isRunning;
+    private String state;
 
     public Site(int num) {
         this.number = num;
-        this.isRunning = true;
+        this.state = "running";
         this.variables = new HashMap<>();
         this.lockTable = new HashMap<>();
 
@@ -43,14 +48,18 @@ public class Site {
 
     // check if site is up and running
     public Boolean isRunning() {
-        return this.isRunning;
+        return this.state.equals("running");
     }
 
     // Handles setting the failed / recover state of the site
     // Methods for recover / fail are at the DM now
 
-    public void setSiteState(Boolean state) {
-        this.isRunning = state;
+    public void setSiteState(String state) {
+        this.state = state;
+    }
+
+    public String getSiteState() {
+        return state;
     }
 
     public int getSiteNum() {
@@ -89,8 +98,8 @@ public class Site {
         return this.variables.get(id).getData();
     }
 
-    public void updateVariable(String id, Integer value) {
-        this.variables.get(id).updateData(value);
+    public void updateVariable(String id, Integer value, Integer time) {
+        this.variables.get(id).updateData(value, time);
     }
 
     public void lockVariable(Transaction t, String varId, Instruction instruction) {
@@ -100,10 +109,10 @@ public class Site {
     // When a transaction commits, checks to see if it was a write
     // instruction and updates value.  For both R/W it will remove
     // from lock queue
-    public void handleLockTable(Transaction t, String varId) {
+    public void handleLockTable(Transaction t, String varId, Integer time) {
         Instruction instruction = lockTable.get(varId).get(t);
         if(instruction.getInstruction().equals("W")) {
-            updateVariable(varId, instruction.getValue());
+            updateVariable(varId, instruction.getValue(), time);
         }
         lockTable.get(varId).remove(t);
     }

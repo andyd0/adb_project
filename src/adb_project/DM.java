@@ -1,7 +1,6 @@
 package adb_project;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 
@@ -26,7 +25,68 @@ public class DM {
     // Just a wrapper so that the instruction can be sent to the function that
     // will check for locks etc.
     public void write(Transaction T, Instruction instruction) {
-        handleOperation(T, instruction,"W");
+
+        String transactionID = "T" + T.getID().toString();
+
+        Integer index = instruction.getVariable();
+        String variable = "x" + index.toString();
+        Integer value = instruction.getValue();
+
+        // Getting a count of failed sites for later checking against what is
+        // not locked
+        if(index % 2 == 0) {
+
+            Integer failCheck = MAX_SITES - getFailCount();
+
+            // Counts up the number locked
+
+            // If the number of variables that are not locked is greater than or equal to the
+            // failCheck then we can lock
+            int not_locked = 0;
+            for(Site site: sites){
+                not_locked += (!site.isVariableLocked(variable) && site.getSiteState().equals("running")) ? 1 : 0;
+            }
+
+            if(not_locked >= failCheck) {
+                for(Site site: sites){
+                    if(site.isRunning()) {
+                        site.lockVariable(T, variable, instruction);
+                    }
+                }
+
+                T.addLockedVariable(index);
+
+                System.out.println(transactionID +" wrote to " + variable + " to all sites " + ": " + value.toString());
+
+              // This needs to be implemented
+            } else if(deadLockCheck()) {
+                abort(T);
+                // Since the variable is locked or cannot be accessed,
+                // add to lock queue
+            } else {
+                TM.addToLockQueue(variable, T);
+            }
+
+        } else {
+
+            Integer siteID = 1 + index % 10;
+            Site site = sites.get(siteID - 1);
+
+            if(!site.getSiteState().equals("failed")) {
+                if(site.isVariableLocked(variable)) {
+                    TM.addToLockQueue(variable, T);
+                } else {
+                    site.lockVariable(T, variable, instruction);
+
+                    T.addLockedVariable(index);
+
+                    System.out.println(transactionID +" wrote to " + variable + " at Site " +
+                            sites.get(0).getSiteNum() + ": " + value.toString());
+                }
+            } else if(site.getSiteState().equals("failed")) {
+                TM.addToWaitQueue(siteID, T);
+            }
+        }
     }
 
     // Handles read only or passes read locks to the function that will
@@ -35,108 +95,95 @@ public class DM {
 
         String transactionID = "T" + T.getID().toString();
 
-        Integer value;
+        Integer value = -1;
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
 
         // Making sure that the site being checked is not down
-        Site site = getRandomSite(index);
-
-        if(T.isReadOnly()) {
-            value = site.getVariable(variable).getPreviousValue();
-            System.out.println(transactionID +" read " + variable + ": " + value.toString());
-        } else {
-            handleOperation(T, instruction,"R");
-        }
-    }
-
-    // Checks whether a variable is locked and handles as necessary
-    private void handleOperation(Transaction T, Instruction instruction, String type) {
-
-        String transactionID = "T" + T.getID().toString();
-        ArrayList<Site> checkSites = new ArrayList<>();
-        Integer failCheck;
-
-        Integer variable = instruction.getVariable();
-        Integer value;
-
-        // Getting a count of failed sites for later checking against what is
-        // not locked
-        if(variable % 2 == 0) {
-            checkSites = sites;
-            failCheck = MAX_SITES - getFailCount();
-        } else {
-            Integer siteID = 1 + variable % 10;
-            Site site = sites.get(siteID - 1);
-            checkSites.add(site);
-            failCheck = (site.isRunning()) ? 1 : 0;
-        }
-
-        // Counts up the number locked
-        int not_locked = 0;
-        for(Site site: checkSites){
-            not_locked += (!site.isVariableLocked( "x" + variable.toString()) && site.isRunning()) ? 1 : 0;
-        }
-
-        // If the number of variables that are not locked is greater than or equal to the
-        // failCheck then we can lock
-        if(not_locked >= failCheck) {
-            for(Site site: sites){
-                if(site.isRunning()) {
-                    site.lockVariable(T,  "x" + variable.toString(), instruction);
-                }
-            }
-
-            T.addLockedVariable(variable);
-
-            // Handles the printing of the read / write variable
-            String text;
-
-            if(type.equals("R")) {
-                value = getRandomSite(variable).getVariableData("x" + variable);
-                System.out.println(transactionID +" read " + variable + ": " + value.toString());
-            } else {
-                value = instruction.getValue();
-                if(checkSites.size() == 1) {
-                    text = " at Site " + sites.get(0).getSiteNum();
-                } else {
-                    text = " to all sites ";
-                }
-                System.out.println(transactionID +" wrote to x" + variable.toString() + text
-                        + ": " + value.toString());
-            }
-          // This needs to be implemented
-        } else if(deadLockCheck()) {
-            abort(T);
-          // Since the variable is locked or cannot be accessed,
-          // add to lock queue
-        } else {
-            TM.addToLockQueue(  "x" + variable.toString(), T);
-        }
-    }
-
-    // TODO: Need to handle the case when the variable is odd and site is down?
-    private Site getRandomSite(Integer index) {
-
-        Random randomGenerator = new Random();
-        Integer siteID;
-        Site site;
-
         if(index % 2 == 0) {
-            site = sites.get(randomGenerator.nextInt(9));
-            while(!site.isRunning()){
-                siteID = randomGenerator.nextInt(9);
-                site = sites.get(siteID - 1);
+
+            if(T.isReadOnly()) {
+
+                Random randomGenerator = new Random();
+                Integer siteID;
+                Site site;
+                site = sites.get(randomGenerator.nextInt(9));
+
+                while(!site.isRunning()) {
+                    siteID = randomGenerator.nextInt(9);
+                    site = sites.get(siteID - 1);
+                }
+
+                value = site.getVariable(variable).getPreviousValue(T.getStartTime());
+                System.out.println(transactionID + " read " + variable + ": " + value.toString());
+
+            } else {
+
+                Integer failCheck = MAX_SITES - getFailCount();
+
+                // Counts up the number locked
+
+                // If the number of variables that are not locked is greater than or equal to the
+                // failCheck then we can lock
+                int not_locked = 0;
+                for(Site site: sites){
+                    not_locked += (!site.isVariableLocked(variable) && site.isRunning()) ? 1 : 0;
+                }
+
+                if(not_locked >= failCheck) {
+
+                    for(int i = 0; i < sites.size(); i++) {
+                        Site site = sites.get(i);
+                        if(site.getSiteState().equals("running") && i == 0) {
+                            value = site.getVariable(variable).getData();
+                            site.lockVariable(T, variable, instruction);
+                        } else if(site.getSiteState().equals("running")) {
+                            site.lockVariable(T, variable, instruction);
+                        }
+                    }
+
+                    T.addLockedVariable(index);
+                    System.out.println(transactionID +" read " + variable + ": " + value.toString());
+
+                // This needs to be implemented
+                } else if(deadLockCheck()) {
+                    abort(T);
+                    // Since the variable is locked or cannot be accessed,
+                    // add to lock queue
+
+                } else {
+                    TM.addToLockQueue(variable, T);
+                }
             }
+
         } else {
-            siteID = 1 + index % 10;
-            site = sites.get(siteID - 1);
+
+            Integer siteID = 1 + index % 10;
+            Site site = sites.get(siteID - 1);
+
+            if(!site.getSiteState().equals("failed")) {
+
+                if(T.isReadOnly()) {
+                    value = site.getVariable(variable).getPreviousValue(T.getStartTime());
+                    System.out.println(transactionID + " read " + variable + ": " + value.toString());
+                } else if(site.isVariableLocked(variable)) {
+                    TM.addToLockQueue(variable, T);
+                } else {
+                    site.lockVariable(T, variable, instruction);
+                    value = site.getVariable(variable).getData();
+                    T.addLockedVariable(index);
+
+                    System.out.println(transactionID +" wrote to " + variable + " at Site " +
+                            sites.get(0).getSiteNum() + ": " + value.toString());
+                }
+            } else {
+                TM.addToWaitQueue(siteID, T);
+            }
         }
-        return site;
     }
 
 
-    // Creates the sites for the DM
+     // Creates the sites for the DM
     private ArrayList<Site> initializeSites() {
         ArrayList<Site> sites = new ArrayList<>();
         for (int i = 1; i <= MAX_SITES; i++) {
@@ -150,9 +197,9 @@ public class DM {
     // TODO: Clear locktable for odd variables?  Unclear atm on how to handle
     public void fail(Instruction instruction) {
         Integer siteID = instruction.getID();
-        sites.get(siteID).setSiteState(false);
+        sites.get(siteID).setSiteState("failed");
         sites.get(siteID).clearLocktable();
-        failedSites[siteID] = 1;
+        failedSites[siteID - 1] = 1;
         failedSiteCount++;
     }
 
@@ -163,8 +210,8 @@ public class DM {
     // Handles recovering a site
     public void recover(Instruction instruction) {
         Integer siteID = instruction.getID();
-        sites.get(siteID).setSiteState(true);
-        failedSites[siteID] = 0;
+        sites.get(siteID).setSiteState("recovered");
+        failedSites[siteID - 1] = 0;
         failedSiteCount--;
     }
 
@@ -181,14 +228,21 @@ public class DM {
         if(!TM.emptyLockQueue(varId)) {
             Transaction T = TM.handleLockQueue(varId);
             Instruction instruction = T.getCurrentInstruction();
-            handleOperation(T, instruction, instruction.getInstruction());
+            String type = instruction.getInstruction();
 
-            while(instruction.getInstruction().equals("R") && !TM.emptyLockQueue(varId)) {
-                T = TM.handleLockQueue(varId);
-                instruction = T.getCurrentInstruction();
-                if(instruction.getInstruction().equals("R")) {
-                    handleOperation(T, instruction, instruction.getInstruction());
+            if(type.equals("R")) {
+
+                read(T, instruction);
+                String check = "R";
+                while(check.equals("R") && !TM.emptyLockQueue(varId)){
+                    check = TM.peekLockQueue(varId);
+                    if(check.equals("R")) {
+                        T = TM.handleLockQueue(varId);
+                        read(T, instruction);
+                    }
                 }
+            } else {
+                write(T, instruction);
             }
         }
     }
@@ -198,24 +252,24 @@ public class DM {
     // TODO: This needs to also update the value
     public void end(Transaction T) {
 
-        ArrayList<Site> sites = this.sites;
         Queue<Integer> variables = T.getVariablesLocked();
 
         while(!variables.isEmpty()) {
-            Integer variable = variables.remove();
+            Integer index = variables.remove();
+            String variable = "x" + index.toString();
 
-            if(variable % 2 == 0) {
+            if(index % 2 == 0) {
                 for(Site site: sites) {
                     if(site.isRunning()) {
-                        site.handleLockTable(T, "x" + variable.toString());
+                        site.handleLockTable(T, variable, TM.getTime());
                     }
                 }
             } else {
-                Integer site_no = 1 + variable % 10;
+                Integer site_no = 1 + index % 10;
                 Site site = sites.get(site_no - 1);
-                site.handleLockTable(T,"x" + variable.toString());
+                site.handleLockTable(T, variable, TM.getTime());
             }
-            checkLockQueue("x" + variable.toString());
+            checkLockQueue(variable);
         }
         T.stopTransaction();
     }
