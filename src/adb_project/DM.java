@@ -44,12 +44,12 @@ public class DM {
             // failCheck then we can lock
             int not_locked = 0;
             for(Site site: sites){
-                not_locked += (!site.isVariableLocked(variable) && site.getSiteState().equals("running")) ? 1 : 0;
+                not_locked += (site.getSiteState().equals("running") && !site.isVariableLocked(variable)) ? 1 : 0;
             }
 
             if(not_locked >= failCheck) {
                 for(Site site: sites){
-                    if(site.isRunning()) {
+                    if(site.getSiteState().equals("running")) {
                         site.lockVariable(T, variable, instruction);
                     }
                 }
@@ -73,7 +73,7 @@ public class DM {
             Site site = sites.get(siteID - 1);
 
             if(!site.getSiteState().equals("failed")) {
-                if(site.isVariableLocked(variable)) {
+                if(site.isVariableWriteLocked(variable)) {
                     TM.addToLockQueue(variable, T);
                 } else {
                     site.lockVariable(T, variable, instruction);
@@ -109,7 +109,7 @@ public class DM {
                 Site site;
                 site = sites.get(randomGenerator.nextInt(9));
 
-                while(!site.isRunning()) {
+                while(!site.getSiteState().equals("running")) {
                     siteID = randomGenerator.nextInt(9);
                     site = sites.get(siteID - 1);
                 }
@@ -127,7 +127,7 @@ public class DM {
                 // failCheck then we can lock
                 int not_locked = 0;
                 for(Site site: sites){
-                    not_locked += (!site.isVariableLocked(variable) && site.isRunning()) ? 1 : 0;
+                    not_locked += (site.getSiteState().equals("running") && !site.isVariableWriteLocked(variable)) ? 1 : 0;
                 }
 
                 if(not_locked >= failCheck) {
@@ -166,7 +166,7 @@ public class DM {
                 if(T.isReadOnly()) {
                     value = site.getVariable(variable).getPreviousValue(T.getStartTime());
                     System.out.println(transactionID + " read " + variable + ": " + value.toString());
-                } else if(site.isVariableLocked(variable)) {
+                } else if(site.isVariableWriteLocked(variable)) {
                     TM.addToLockQueue(variable, T);
                 } else {
                     site.lockVariable(T, variable, instruction);
@@ -195,8 +195,8 @@ public class DM {
     // TODO: Clear locktable for odd variables?  Unclear atm on how to handle
     public void fail(Instruction instruction) {
         Integer siteID = instruction.getID();
-        sites.get(siteID).setSiteState("failed");
-        sites.get(siteID).clearLocktable();
+        sites.get(siteID - 1).setSiteState("failed");
+        sites.get(siteID - 1).clearLocktable();
         failedSites[siteID - 1] = 1;
         failedSiteCount++;
     }
@@ -208,7 +208,7 @@ public class DM {
     // Handles recovering a site
     public void recover(Instruction instruction) {
         Integer siteID = instruction.getID();
-        sites.get(siteID).setSiteState("recovered");
+        sites.get(siteID - 1).setSiteState("recovered");
         failedSites[siteID - 1] = 0;
         failedSiteCount--;
     }
@@ -258,7 +258,7 @@ public class DM {
 
             if(index % 2 == 0) {
                 for(Site site: sites) {
-                    if(site.isRunning()) {
+                    if(site.getSiteState().equals("running")) {
                         site.handleLockTable(T, variable, TM.getTime());
                     }
                 }

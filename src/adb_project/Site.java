@@ -46,11 +46,6 @@ public class Site {
         return result;
     }
 
-    // check if site is up and running
-    public Boolean isRunning() {
-        return this.state.equals("running");
-    }
-
     // Handles setting the failed / recover state of the site
     // Methods for recover / fail are at the DM now
 
@@ -115,6 +110,19 @@ public class Site {
             updateVariable(varId, instruction.getValue(), time);
         }
         lockTable.get(varId).remove(t);
+    }
+
+    public boolean isVariableWriteLocked(String varId) {
+
+        if(lockTable.get(varId).size() != 0) {
+            if (lockTable.get(varId).entrySet().iterator().next().getValue().getInstruction().equals("R")) {
+                return false;
+            } else {
+                return true;
+            }
+        } else {
+            return false;
+        }
     }
 
     public boolean isVariableLocked(String varId) {
