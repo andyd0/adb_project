@@ -269,7 +269,7 @@ public class DM {
             if(index % 2 == 0) {
                 for(Site site: sites) {
                     if(!site.getSiteState().equals("failed") && (T.getOnSites().get(site.getSiteNum()) != 0)
-                       && site.getVariable(variable).getOkToRead()) {
+                       && site.isVariableLocked(variable)) {
                         site.handleLockTable(T, variable, TM.getTime());
                     }
                 }

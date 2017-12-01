@@ -1,22 +1,13 @@
 package adb_project;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.PriorityQueue;
-import java.util.Queue;
+import java.util.*;
 
-class TComparator implements Comparator<Transaction>{
-    public int compare(Transaction a, Transaction b) {
-        return a.getLockTime().compareTo(b.getLockTime());
-    }
-}
 
 public class TM {
 
     private ArrayList<Instruction> instructions;
     private HashMap<Integer, Transaction> transactionsList;
-    private static HashMap<String, PriorityQueue<Transaction>> lockQueue;
+    private static HashMap<String, Queue<Transaction>> lockQueue;
     private static HashMap<Integer, Queue<Transaction>> waitQueue;
     private static Integer time = 0;
 
@@ -138,7 +129,7 @@ public class TM {
     public static void addToLockQueue(String variable, Transaction transaction) {
         transaction.setLockTime();
         if(lockQueue.get(variable) == null) {
-            PriorityQueue<Transaction> queue = new PriorityQueue<>(new TComparator());
+            Queue<Transaction> queue = new LinkedList<>();
             queue.add(transaction);
             lockQueue.put(variable, queue);
         } else {
@@ -156,7 +147,7 @@ public class TM {
 
     public static void addToWaitQueue(Integer siteId, Transaction transaction) {
         if(waitQueue.get(siteId) == null) {
-            Queue<Transaction> queue = new PriorityQueue<>();
+            Queue<Transaction> queue = new LinkedList<>();
             queue.add(transaction);
             waitQueue.put(siteId, queue);
         } else {

@@ -74,22 +74,22 @@ public class Site {
 
     // check if variable exists on this site by supplying variable id
     public Boolean hasVariable(String id) {
-        return (this.variables.get(id) == null);
+        return (variables.get(id) == null);
     }
 
     // get all variables on this site
     public HashMap<String, Variable> getAllVariables() {
-        return this.variables;
+        return variables;
     }
 
     // get specific variable by supplying its id
     public Variable getVariable(String id) {
-        return this.variables.get(id);
+        return variables.get(id);
     }
 
     // get variable's data by supplying its id
     public Integer getVariableData(String id) {
-        return this.variables.get(id).getData();
+        return variables.get(id).getData();
     }
 
     public void updateVariable(String id, Integer value, Integer time) {
@@ -130,11 +130,7 @@ public class Site {
     }
 
     public boolean isVariableLocked(String varId) {
-        if(lockTable.get(varId).size() == 0) {
-            return false;
-        } else {
-            return true;
-        }
+        return (lockTable.get(varId).size() != 0);
     }
 
     public void clearLocktable() {
