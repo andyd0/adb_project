@@ -29,6 +29,10 @@ public class Parser {
             String[] temp = parseInstruction(line);
             Instruction instruction;
 
+            for(int i = 0; i < temp.length; i++) {
+                temp[i] = temp[i].trim();
+            }
+
             if(temp[0].equals("R")) {
                 instruction = new Instruction(temp[0], parseInt(temp[1]), parseInt(temp[2]), null);
             } else if(temp[0].equals("W")) {

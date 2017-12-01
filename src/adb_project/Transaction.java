@@ -1,7 +1,6 @@
 package adb_project;
 
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
 public class Transaction {
 
@@ -13,6 +12,7 @@ public class Transaction {
     private Integer variable;
     private Boolean running;
     private Queue<Integer> variablesLocked;
+    private HashMap<Integer, Integer> onSites;
     private Instruction currentInstruction;
 
     // variablesLocked is a queue keeping track of the variables that the transaction
@@ -29,6 +29,7 @@ public class Transaction {
         this.variable = variable;
         this.running = true;
         this.variablesLocked = new LinkedList<>();
+        this.onSites = initializeOnSites();
         this.currentInstruction = instruction;
     }
 
@@ -64,12 +65,38 @@ public class Transaction {
         running = false;
     }
 
+    public Boolean isRunning() {
+        return running;
+    }
+
     public void setLockTime() {
         lockAge++;
     }
 
     public Integer getLockTime() {
         return lockAge;
+    }
+
+    public HashMap<Integer, Integer> getOnSites() {
+        return onSites;
+    }
+
+    private HashMap<Integer, Integer> initializeOnSites() {
+
+        HashMap<Integer, Integer> temp = new HashMap<>();
+
+        for (int i = 1; i <= 10; i++) {
+            temp.put(i, 0);
+        }
+        return temp;
+    }
+
+    public void plusOnSites(int siteId) {
+        onSites.put(siteId, onSites.get(siteId) + 1);
+    }
+
+    public void decOnSites(int siteId) {
+            onSites.put(siteId, onSites.get(siteId) - 1);
     }
 
     public String toString() {

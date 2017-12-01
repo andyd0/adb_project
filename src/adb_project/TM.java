@@ -61,6 +61,7 @@ public class TM {
             Integer id;
             Transaction transaction;
 
+
             switch (instruction_type) {
                 case "begin":
                     begin(instruction);
@@ -71,16 +72,28 @@ public class TM {
                 case "W":
                     id = instruction.getID();
                     transaction = this.getTransaction(id);
+
+                    if(!transaction.isRunning()) {
+                        continue;
+                    }
+
                     transaction.addCurrentInstruction(instruction);
                     dm.write(transaction, instruction);
                     break;
                 case "R":
                     id = instruction.getID();
                     transaction = this.getTransaction(id);
+
+                    if(!transaction.isRunning()) {
+                        continue;
+                    }
+
                     transaction.addCurrentInstruction(instruction);
                     dm.read(transaction, instruction);
                     break;
                 case "fail":
+                    id = instruction.getID();
+                    abort(id);
                     dm.fail(instruction);
                     break;
                 case "recover":
@@ -91,6 +104,12 @@ public class TM {
                     break;
                 case "end":
                     id = instruction.getID();
+                    transaction = this.getTransaction(id);
+
+                    if(!transaction.isRunning()) {
+                        continue;
+                    }
+
                     dm.end(this.getTransaction(id));
                     break;
             }
@@ -155,6 +174,24 @@ public class TM {
 
     public static Boolean emptyLockQueue(String variable) {
         return (lockQueue.get(variable) == null || lockQueue.get(variable).size() == 0);
+    }
+
+    public void abort(Integer id) {
+        for (HashMap.Entry<Integer, Transaction> entry : this.transactionsList.entrySet())
+        {
+            HashMap<Integer, Integer> sites = entry.getValue().getOnSites();
+            if(sites != null) {
+                if(sites.get(id) != null && sites.size() > 0 && sites.get(id) > 0) {
+                    entry.getValue().stopTransaction();
+                    System.out.println("Transaction " + entry.getValue().getID() + " aborted because Site " +
+                                        id.toString() + " has failed");
+                }
+            }
+        }
+    }
+
+    public static void abort(Transaction T) {
+
     }
 
     private void incrementLockTimes() {

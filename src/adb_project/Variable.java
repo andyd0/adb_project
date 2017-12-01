@@ -7,6 +7,7 @@ public class Variable {
     private int index;
     private int data;
     private HashMap<Integer, Integer> previousValues;
+    private Boolean okToRead;
 
     // Each variable xi should be initialized to the value 10i
     // Variable also holds previous value.
@@ -16,6 +17,7 @@ public class Variable {
         this.index = i;
         this.data = i * 10;
         this.previousValues = initializePrevValues(i);
+        this.okToRead = true;
     }
 
     private HashMap<Integer, Integer> initializePrevValues(int i) {
@@ -52,6 +54,14 @@ public class Variable {
     public void updateData(int val, int time) {
         this.previousValues.put(time, val);
         this.data = val;
+    }
+
+    public void setOkToRead(Boolean okNotOk) {
+        okToRead = okNotOk;
+    }
+
+    public Boolean getOkToRead() {
+        return okToRead;
     }
 
     public String toString() {

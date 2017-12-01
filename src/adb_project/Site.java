@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Site {
 
-    private int number;
+    private int id;
     private HashMap<String, Variable> variables;
 
     /*
@@ -22,27 +22,26 @@ public class Site {
     private HashMap<String, HashMap<Transaction, Instruction>> lockTable;
     private String state;
 
-    public Site(int num) {
-        this.number = num;
+    public Site(int id) {
+        this.id = id;
         this.state = "running";
         this.variables = new HashMap<>();
-        this.lockTable = new HashMap<>();
+        this.lockTable = initializeLockTable();
 
         for (int i = 1; i <= 20; i++) {
             Variable v = new Variable(i);
 
             if (i % 2 == 0) {
                 variables.put("x" + i, v);
-            } else if ((1 + i % 10) == num) {
+            } else if ((1 + i % 10) == id) {
                 variables.put("x" + i, v);
             }
-            lockTable.put("x" + i, new HashMap<>());
         }
     }
 
     public String toString() {
         String result = "";
-        result += "Site: " + number;
+        result += "Site: " + id;
         return result;
     }
 
@@ -58,7 +57,7 @@ public class Site {
     }
 
     public int getSiteNum() {
-        return this.number;
+        return id;
     }
 
     // check if variable exists on this site by supplying variable object
@@ -94,11 +93,15 @@ public class Site {
     }
 
     public void updateVariable(String id, Integer value, Integer time) {
-        this.variables.get(id).updateData(value, time);
+        variables.get(id).updateData(value, time);
+        if(!variables.get(id).getOkToRead()) {
+            variables.get(id).setOkToRead(true);
+        }
     }
 
     public void lockVariable(Transaction t, String varId, Instruction instruction) {
         lockTable.get(varId).put(t, instruction);
+        t.plusOnSites(this.id);
     }
 
     // When a transaction commits, checks to see if it was a write
@@ -106,15 +109,16 @@ public class Site {
     // from lock queue
     public void handleLockTable(Transaction t, String varId, Integer time) {
         Instruction instruction = lockTable.get(varId).get(t);
-        if(instruction.getInstruction().equals("W")) {
+         if(instruction.getInstruction().equals("W")) {
             updateVariable(varId, instruction.getValue(), time);
         }
         lockTable.get(varId).remove(t);
+        t.decOnSites(this.id);
     }
 
     public boolean isVariableWriteLocked(String varId) {
 
-        if(lockTable.get(varId).size() != 0) {
+        if(lockTable.size() != 0 && lockTable.get(varId).size() != 0) {
             if (lockTable.get(varId).entrySet().iterator().next().getValue().getInstruction().equals("R")) {
                 return false;
             } else {
@@ -137,16 +141,45 @@ public class Site {
         this.lockTable = new HashMap<>();
     }
 
-//    public Transaction getLockingTransaction(String varId) {
-//        for (Variable v: lockTable.keySet()) {
-//            if (varId.equals(v.getId())) {
-//                Iterator<Transaction> iterator =
-//                  lockTable.get(v).keySet().iterator();
-//                if (iterator.hasNext()) {
-//                    return iterator.next();
-//                }
-//            }
-//        }
-//        return null;
-//    }
+    private HashMap<String, HashMap<Transaction, Instruction>> initializeLockTable() {
+
+        HashMap<String, HashMap<Transaction, Instruction>> temp = new HashMap<>();
+
+        for (int i = 1; i <= 20; i++) {
+            temp.put("x" + i, new HashMap<>());
+        }
+        return temp;
+    }
+
+    public Set<Transaction> getLockedTransactions(){
+        Set<Transaction> lockedTransactions = new HashSet<>();
+        for (HashMap.Entry<String, HashMap<Transaction, Instruction>> entry : this.lockTable.entrySet()) {
+            for (HashMap.Entry<Transaction, Instruction> tEntry : entry.getValue().entrySet()) {
+                lockedTransactions.add(tEntry.getKey());
+            }
+        }
+        return lockedTransactions;
+    }
+
+    public void removeFromLockTable(Transaction T) {
+        for (HashMap.Entry<String, HashMap<Transaction, Instruction>> entry : this.lockTable.entrySet()) {
+            for (HashMap.Entry<Transaction, Instruction> tEntry : entry.getValue().entrySet()) {
+                if(T.getID().equals(tEntry.getKey().getID())) {
+                    entry.getValue().remove(T);
+                }
+            }
+        }
+    }
+
+    public void recover() {
+        for (HashMap.Entry<String, Variable> entry : this.variables.entrySet()) {
+            Integer id = Integer.parseInt(entry.getKey().replaceAll("\\D+",""));
+            if(id % 2 == 0) {
+                entry.getValue().setOkToRead(false);
+            } else {
+                entry.getValue().setOkToRead(true);
+            }
+        }
+        lockTable = initializeLockTable();
+    }
 }
