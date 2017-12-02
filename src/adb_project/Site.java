@@ -279,4 +279,19 @@ public class Site {
         result += "Site: " + id;
         return result;
     }
+
+    /**
+     * Gets the transaction which already locked the variable that a new transaction
+     * tried to access (used in deadLockCheck() by the DM)
+     * @return Transaction - existing transaction locking a variable
+    */
+    public Transaction getTransactionThatLockedVariable(String varId) {
+        HashMap<Transaction, Instruction> map = this.lockTable.get(varId);
+        Transaction t = null;
+        for (HashMap.Entry<Transaction, Instruction> entry : map.entrySet()) {
+            t = entry.getKey();
+        }
+
+        return t;
+    }
 }

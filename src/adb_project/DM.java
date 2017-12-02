@@ -103,9 +103,13 @@ public class DM {
 
               // This needs to be implemented
             } else if(deadLockCheck(T, instruction)) {
-                TM.abort(T);
+                System.out.println("Deadlock exists");
+                // TM.abort(T);
                 // Since the variable is locked or cannot be accessed,
                 // add to lock queue
+
+                // TM.abort(T.getID());
+                // this.safeTransactionSet.remove(T.getID());
             } else {
                 TM.addToLockQueue(variable, T);
             }
@@ -219,10 +223,13 @@ public class DM {
                     }
                 // This needs to be implemented
                 } else if(deadLockCheck(T, instruction)) {
-                    TM.abort(T);
+                    System.out.println("Deadlock exists");
+                    // TM.abort(T);
                     // Since the variable is locked or cannot be accessed,
                     // add to lock queue
 
+                    // TM.abort(T.getID());
+                    // this.safeTransactionSet.remove(T.getID());
                 } else {
                     TM.addToLockQueue(variable, T);
                 }
@@ -297,7 +304,6 @@ public class DM {
      * @return Boolean
      */
     public Boolean deadLockCheck(Transaction T, Instruction instruction) {
-        //return false;
         String transactionID = "T" + T.getID().toString();
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
@@ -319,39 +325,33 @@ public class DM {
         }
 
         // 2. using site info: get transaction (Tw) that holds a lock on the current variable
-        /*
+        Transaction Tw = site.getTransactionThatLockedVariable(variable);
 
-        TODO: implement getTransactionThatLockedVariable(variableId) in Site.java
-
-        Transaction Tw = s.getTransactionThatLockedVariable(variableId);
-
-        if (tw == null) {
-            // no transaction already locking the variable, safe scenario so continue
+        // no transaction already locking the variable, this is safe so continue
+        if (Tw == null) {
             return false;
         }
-
-        */
 
         // 3. if Tw exists then the current transaction (T from the function args)
         // will need to wait on Tw
 
-        /*
-
         // Check if Tw already exists in the set, if it does, this will lead to a cycle
-
-        existingTransactionId = "T" + Tw.getID().toString()
-
+        String existingTransactionId = "T" + Tw.getID().toString();
+        Integer existingTID = Tw.getID();
         if (this.safeTransactionSet.contains(existingTransactionId)) {
             // deadlock exists so we remove this transaction from the safe set
-            // and abort it following the deadLockCheck inside the write() and read() functions
-
-            this.safeTransactionSet.remove(existingTransactionId);
+            // and abort it
+            System.out.println("---------- DEADLOCK FOUND ----------");
             return true;
         } else {
+            System.out.print("Adding current Transaction: T" + T.getID().toString());
+            System.out.print(" and existing Transaction Tw: T" + Tw.getID().toString());
+            System.out.print(" to the safeset\n");
             this.safeTransactionSet.add("T" + T.getID().toString());
             this.safeTransactionSet.add("T" + Tw.getID().toString());
         }
 
+        /*
         System.out.println("----------");
         System.out.println("safeTransactionSet currently has:");
 
@@ -364,7 +364,6 @@ public class DM {
 
         System.out.println("----------");
         */
-
         return false;
     }
 
