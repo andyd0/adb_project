@@ -2,13 +2,12 @@ package adb_project;
 
 import java.util.*;
 
+
 public class DM {
 
     private final Integer MAX_SITES = 10;
     private int failedSiteCount;
-
     private ArrayList<Site> sites;
-    private int[] failedSites;
 
     // FailedSites = bit vector to keep track of failed sites
     // A count as well to keep track of count without having to go through
@@ -16,8 +15,17 @@ public class DM {
 
     public DM() {
         failedSiteCount = 0;
-        failedSites = new int[MAX_SITES];
         sites = initializeSites();
+    }
+
+    // Creates the sites for the DM
+    private ArrayList<Site> initializeSites() {
+        ArrayList<Site> sites = new ArrayList<>();
+        for (int i = 1; i <= MAX_SITES; i++) {
+            Site s = new Site(i);
+            sites.add(s);
+        }
+        return sites;
     }
 
     // Just a wrapper so that the instruction can be sent to the function that
@@ -29,6 +37,7 @@ public class DM {
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
         Integer value = instruction.getValue();
+        String type = instruction.getInstruction();
 
         // Getting a count of failed sites for later checking against what is
         // not locked
@@ -53,6 +62,7 @@ public class DM {
                 }
 
                 T.addLockedVariable(index);
+                T.addLockedVariableType(variable, instruction);
 
                 System.out.println(transactionID +" wrote to " + variable + " to all sites " + ": " + value.toString());
 
@@ -67,8 +77,8 @@ public class DM {
 
         } else {
 
-            Integer siteID = 1 + index % 10;
-            Site site = sites.get(siteID - 1);
+            Integer siteId = 1 + index % 10;
+            Site site = sites.get(siteId - 1);
 
             if(!site.getSiteState().equals("failed")) {
                 if(site.isVariableWriteLocked(variable)) {
@@ -77,12 +87,13 @@ public class DM {
                     site.lockVariable(T, variable, instruction);
 
                     T.addLockedVariable(index);
+                    T.addLockedVariableType(variable, instruction);
 
                     System.out.println(transactionID +" wrote to " + variable + " at Site " +
                             sites.get(0).getId() + ": " + value.toString());
                 }
             } else if(site.getSiteState().equals("failed")) {
-                TM.addToWaitQueue(siteID, T);
+                TM.addToWaitQueue(siteId, T);
             }
         }
     }
@@ -96,20 +107,25 @@ public class DM {
         Integer value = -1;
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
+        String type = instruction.getInstruction();
+
 
         // Making sure that the site being checked is not down
-        if(index % 2 == 0) {
+        if(T.checkLockedVariableType(variable)) {
+            value = T.getLockedVariableInfo(variable).getValue();
+            System.out.println(transactionID + " read " + variable + ": " + value.toString());
+        } else if(index % 2 == 0) {
 
             if(T.isReadOnly()) {
 
                 Random randomGenerator = new Random();
-                Integer siteID;
+                Integer siteId;
                 Site site;
                 site = sites.get(randomGenerator.nextInt(9));
 
                 while(!site.getSiteState().equals("running")) {
-                    siteID = randomGenerator.nextInt(9);
-                    site = sites.get(siteID - 1);
+                    siteId = randomGenerator.nextInt(9);
+                    site = sites.get(siteId - 1);
                 }
 
                 value = site.getVariable(variable).getPreviousValue(T.getStartTime());
@@ -138,6 +154,7 @@ public class DM {
                             if (i == 0) {
                                 value = site.getVariable(variable).getValue();
                                 T.addLockedVariable(index);
+                                T.addLockedVariableType(variable, instruction);
                                 System.out.println(transactionID +" read " + variable + ": " + value.toString());
                             }
                             site.lockVariable(T, variable, instruction);
@@ -159,8 +176,8 @@ public class DM {
 
         } else {
 
-            Integer siteID = 1 + index % 10;
-            Site site = sites.get(siteID - 1);
+            Integer siteId = 1 + index % 10;
+            Site site = sites.get(siteId - 1);
 
             if(!site.getSiteState().equals("failed")) {
 
@@ -173,35 +190,24 @@ public class DM {
                     site.lockVariable(T, variable, instruction);
                     value = site.getVariable(variable).getValue();
                     T.addLockedVariable(index);
+                    T.addLockedVariableType(variable, instruction);
                     System.out.println(transactionID + " read " + variable + ": " + value.toString());
                 }
             } else {
-                TM.addToWaitQueue(siteID, T);
+                TM.addToWaitQueue(siteId, T);
             }
         }
     }
 
-
-     // Creates the sites for the DM
-    private ArrayList<Site> initializeSites() {
-        ArrayList<Site> sites = new ArrayList<>();
-        for (int i = 1; i <= MAX_SITES; i++) {
-            Site s = new Site(i);
-            sites.add(s);
-        }
-        return sites;
-    }
-
     // Handles failing a site
     public void fail(Instruction instruction) {
-        Integer siteID = instruction.getId();
-        sites.get(siteID - 1).setSiteState("failed");
+        Integer siteId = instruction.getId();
+        sites.get(siteId - 1).setSiteState("failed");
 
-        Set<Transaction> lockedTransactions = sites.get(siteID - 1).getLockedTransactions();
+        Set<Transaction> lockedTransactions = sites.get(siteId - 1).getLockedTransactions();
         removeTransLock(lockedTransactions);
 
-        sites.get(siteID - 1).clearLocktable();
-        failedSites[siteID - 1] = 1;
+        sites.get(siteId - 1).clearLocktable();
         failedSiteCount++;
     }
 
@@ -211,10 +217,9 @@ public class DM {
 
     // Handles recovering a site
     public void recover(Instruction instruction) {
-        Integer siteID = instruction.getId();
-        sites.get(siteID - 1).setSiteState("recovered");
-        sites.get(siteID - 1).recover();
-        failedSites[siteID - 1] = 0;
+        Integer siteId = instruction.getId();
+        sites.get(siteId - 1).setSiteState("recovered");
+        sites.get(siteId - 1).recover();
         failedSiteCount--;
     }
 
@@ -230,7 +235,6 @@ public class DM {
             String type = instruction.getInstruction();
 
             if(type.equals("R")) {
-
                 read(T, instruction);
                 String check = "R";
                 while(check.equals("R") && !TM.emptyLockQueue(varId)){
@@ -245,7 +249,6 @@ public class DM {
             }
         }
     }
-
 
     public void removeTransLock(Set<Transaction> lockedTransactions) {
         for(Site site : sites) {
@@ -280,37 +283,18 @@ public class DM {
         T.stopTransaction();
     }
 
-    public void dump(Instruction instruction) {
-        ArrayList<Site> sites = this.sites;
-        System.out.println("=== output of dump ===");
-        for(Site site: sites){
-            int i = 0;
-            System.out.println("Site " + site.getId().toString());
-            for(HashMap.Entry<String, Variable> variable : site.getAllVariables().entrySet()) {
-                if(variable.getValue().checkCommitted()) {
-                    System.out.println(variable.getKey() + ": " + variable.getValue().getValue());
-                    i++;
-                }
-            }
-            if(i != site.getVariableCount()) {
-                System.out.println("All otther variables have their initial values");
-            }
-            System.out.println("");
-        }
-    }
-
     public void dump() {
         System.out.println("\n=== output of dump ===");
         for(Site site: this.sites){
-            int i = 0;
+            int commitCount = 0;
             System.out.println("Site " + site.getId().toString());
             for(HashMap.Entry<String, Variable> variable : site.getAllVariables().entrySet()) {
                 if(variable.getValue().checkCommitted()) {
                     System.out.println(variable.getKey() + ": " + variable.getValue().getValue());
-                    i++;
+                    commitCount++;
                 }
             }
-            if(i != site.getVariableCount()) {
+            if(commitCount != site.getVariableCount()) {
                 System.out.println("All otther variables have their initial values");
             }
             System.out.println("");

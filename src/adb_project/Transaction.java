@@ -12,6 +12,7 @@ public class Transaction {
     private Integer variable;
     private Boolean running;
     private Queue<Integer> variablesLocked;
+    private HashMap<String, Instruction> variablesLockType;
     private HashMap<Integer, Integer> onSites;
     private Instruction currentInstruction;
 
@@ -29,6 +30,7 @@ public class Transaction {
         this.variable = variable;
         this.running = true;
         this.variablesLocked = new LinkedList<>();
+        this.variablesLockType = new HashMap<>();
         this.onSites = initializeOnSites();
         this.currentInstruction = instruction;
     }
@@ -53,12 +55,29 @@ public class Transaction {
         return currentInstruction;
     }
 
+    //TODO: Should be updated to use string ids like other methods
     public void addLockedVariable(Integer variable) {
         variablesLocked.add(variable);
     }
 
     public Queue<Integer> getVariablesLocked() {
         return variablesLocked;
+    }
+
+    public void addLockedVariableType(String variable, Instruction instruction) {
+        variablesLockType.put(variable, instruction);
+    }
+
+    public void removeLockedVariableType(String variable) {
+        variablesLockType.remove(variable);
+    }
+
+    public Instruction getLockedVariableInfo(String variable) {
+        return variablesLockType.get(variable);
+    }
+
+    public Boolean checkLockedVariableType(String variable) {
+        return (variablesLockType.get(variable) != null && variablesLockType.get(variable).equals("W"));
     }
 
     public void stopTransaction() {

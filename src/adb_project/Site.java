@@ -110,10 +110,11 @@ public class Site {
     // from lock queue
     public void handleLockTable(Transaction t, String varId, Integer time) {
         Instruction instruction = lockTable.get(varId).get(t);
-         if(instruction.getInstruction().equals("W")) {
+        if(instruction.getInstruction().equals("W")) {
             updateVariable(varId, instruction.getValue(), time);
         }
         lockTable.get(varId).remove(t);
+        t.removeLockedVariableType(varId);
         t.decOnSites(this.id);
     }
 
@@ -138,6 +139,7 @@ public class Site {
         this.lockTable = new HashMap<>();
     }
 
+    // TODO: This should not create a table for all 20 variables.  Just relevant ones
     private HashMap<String, HashMap<Transaction, Instruction>> initializeLockTable() {
 
         HashMap<String, HashMap<Transaction, Instruction>> temp = new HashMap<>();
@@ -165,6 +167,15 @@ public class Site {
                     entry.getValue().remove(T);
                 }
             }
+        }
+    }
+
+    public Boolean checkTransWriteLock(String variable, Transaction T) {
+        HashMap<Transaction, Instruction> check = lockTable.get(variable);
+        if(check.get(T) != null && check.get(T).getInstruction().equals("W")) {
+            return true;
+        } else {
+            return false;
         }
     }
 

@@ -10,7 +10,7 @@ public class Driver {
 
       if (args.length == 0) {
         System.out.println("No test file specified in args, using path\n");
-        path = cwd + "/tests/input_2.txt";
+        path = cwd + "/tests/input_20.txt";
       } else {
         path = cwd + "/" + args[0];
       }
