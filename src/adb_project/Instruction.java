@@ -22,7 +22,7 @@ public class Instruction {
         return instruction;
     }
 
-    public Integer getID() {
+    public Integer getId() {
         return id;
     }
 

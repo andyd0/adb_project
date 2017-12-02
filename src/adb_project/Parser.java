@@ -37,8 +37,12 @@ public class Parser {
                 instruction = new Instruction(temp[0], parseInt(temp[1]), parseInt(temp[2]), null);
             } else if(temp[0].equals("W")) {
                 instruction = new Instruction(temp[0], parseInt(temp[1]), parseInt(temp[2]), Integer.parseInt(temp[3]));
-            } else if(temp.length == 1) {
+            } else if(temp[0].equals("dump") && temp.length == 1) {
                 instruction = new Instruction(temp[0], null, null, null);
+            } else if(temp[0].equals("dump") && temp[1].charAt(0) == 'x') {
+                instruction = new Instruction(temp[0]+"x", null, null, parseInt(temp[1]));
+            } else if(temp[0].equals("dump") && temp.length > 1) {
+                instruction = new Instruction(temp[0]+"i", null, null, Integer.parseInt(temp[1]));
             } else {
                 instruction = new Instruction(temp[0], parseInt(temp[1]), null, null);
             }

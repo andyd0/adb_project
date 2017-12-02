@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Site {
 
-    private int id;
+    private Integer id;
     private HashMap<String, Variable> variables;
 
     /*
@@ -22,7 +22,7 @@ public class Site {
     private HashMap<String, HashMap<Transaction, Instruction>> lockTable;
     private String state;
 
-    public Site(int id) {
+    public Site(Integer id) {
         this.id = id;
         this.state = "running";
         this.variables = new HashMap<>();
@@ -56,7 +56,7 @@ public class Site {
         return state;
     }
 
-    public int getSiteNum() {
+    public Integer getId() {
         return id;
     }
 
@@ -88,12 +88,13 @@ public class Site {
     }
 
     // get variable's data by supplying its id
-    public Integer getVariableData(String id) {
-        return variables.get(id).getData();
+    public Integer getVariableValue(String id) {
+        return variables.get(id).getValue();
     }
 
     public void updateVariable(String id, Integer value, Integer time) {
-        variables.get(id).updateData(value, time);
+        variables.get(id).updateValue(value, time);
+        variables.get(id).valueCommitted();
         if(!variables.get(id).getOkToRead()) {
             variables.get(id).setOkToRead(true);
         }
@@ -165,6 +166,10 @@ public class Site {
                 }
             }
         }
+    }
+
+    public Integer getVariableCount() {
+        return variables.size();
     }
 
     public void recover() {

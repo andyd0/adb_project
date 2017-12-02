@@ -5,9 +5,10 @@ import java.util.HashMap;
 public class Variable {
     private String id;
     private int index;
-    private int data;
+    private int value;
     private HashMap<Integer, Integer> previousValues;
     private Boolean okToRead;
+    private Boolean committed;
 
     // Each variable xi should be initialized to the value 10i
     // Variable also holds previous value.
@@ -15,8 +16,9 @@ public class Variable {
     public Variable(int i) {
         this.id = "x" + Integer.toString(i);
         this.index = i;
-        this.data = i * 10;
+        this.value = i * 10;
         this.previousValues = initializePrevValues(i);
+        this.committed = false;
         this.okToRead = true;
     }
 
@@ -30,8 +32,8 @@ public class Variable {
         return this.id;
     }
 
-    public int getData() {
-        return this.data;
+    public int getValue() {
+        return this.value;
     }
 
     public int getPreviousValue(Integer time) {
@@ -51,9 +53,9 @@ public class Variable {
         return this.index;
     }
 
-    public void updateData(int val, int time) {
+    public void updateValue(int val, int time) {
         this.previousValues.put(time, val);
-        this.data = val;
+        this.value = val;
     }
 
     public void setOkToRead(Boolean okNotOk) {
@@ -64,11 +66,19 @@ public class Variable {
         return okToRead;
     }
 
+    public void valueCommitted() {
+        committed = true;
+    }
+
+    public Boolean checkCommitted() {
+        return committed;
+    }
+
     public String toString() {
         String result = "";
         result += "\nid: " + this.id +"\n";
         result += String.format("index: %1d\n", this.index);
-        result += String.format("data: %1d\n", this.data);
+        result += String.format("data: %1d\n", this.value);
         return result;
     }
 }

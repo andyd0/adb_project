@@ -61,7 +61,7 @@ public class TM {
                     begin(instruction);
                     break;
                 case "W":
-                    id = instruction.getID();
+                    id = instruction.getId();
                     transaction = this.getTransaction(id);
 
                     if(!transaction.isRunning()) {
@@ -72,7 +72,7 @@ public class TM {
                     dm.write(transaction, instruction);
                     break;
                 case "R":
-                    id = instruction.getID();
+                    id = instruction.getId();
                     transaction = this.getTransaction(id);
 
                     if(!transaction.isRunning()) {
@@ -83,7 +83,7 @@ public class TM {
                     dm.read(transaction, instruction);
                     break;
                 case "fail":
-                    id = instruction.getID();
+                    id = instruction.getId();
                     abort(id);
                     dm.fail(instruction);
                     break;
@@ -91,10 +91,16 @@ public class TM {
                     dm.recover(instruction);
                     break;
                 case "dump":
-                    dm.dump(instruction);
+                    dm.dump();
+                    break;
+                case "dumpx":
+                    dm.dump("x" + instruction.getValue().toString());
+                    break;
+                case "dumpi":
+                    dm.dump(instruction.getValue());
                     break;
                 case "end":
-                    id = instruction.getID();
+                    id = instruction.getId();
                     transaction = this.getTransaction(id);
 
                     if(!transaction.isRunning()) {
@@ -112,7 +118,7 @@ public class TM {
     public void begin(Instruction instruction) {
 
         Integer startTime = getTime();
-        Integer transaction = instruction.getID();
+        Integer transaction = instruction.getId();
         Boolean readOnly = instruction.getInstruction().contains("RO");
 
         addTransaction(transaction, readOnly, startTime, null, instruction);

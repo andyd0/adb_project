@@ -1,9 +1,6 @@
 package adb_project;
 
-import java.util.ArrayList;
-import java.util.Queue;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class DM {
 
@@ -82,7 +79,7 @@ public class DM {
                     T.addLockedVariable(index);
 
                     System.out.println(transactionID +" wrote to " + variable + " at Site " +
-                            sites.get(0).getSiteNum() + ": " + value.toString());
+                            sites.get(0).getId() + ": " + value.toString());
                 }
             } else if(site.getSiteState().equals("failed")) {
                 TM.addToWaitQueue(siteID, T);
@@ -139,14 +136,14 @@ public class DM {
                         if (site.getSiteState().equals("running") || (site.getSiteState().equals("recovered") &&
                                                                       site.getVariable(variable).getOkToRead())) {
                             if (i == 0) {
-                                value = site.getVariable(variable).getData();
+                                value = site.getVariable(variable).getValue();
                                 T.addLockedVariable(index);
                                 System.out.println(transactionID +" read " + variable + ": " + value.toString());
                             }
                             site.lockVariable(T, variable, instruction);
                         } else if(site.getSiteState().equals("recovered") &&
                                   !site.getVariable(variable).getOkToRead()) {
-                            TM.addToWaitQueue(site.getSiteNum(), T);
+                            TM.addToWaitQueue(site.getId(), T);
                         }
                     }
                 // This needs to be implemented
@@ -174,7 +171,7 @@ public class DM {
                     TM.addToLockQueue(variable, T);
                 } else {
                     site.lockVariable(T, variable, instruction);
-                    value = site.getVariable(variable).getData();
+                    value = site.getVariable(variable).getValue();
                     T.addLockedVariable(index);
                     System.out.println(transactionID + " read " + variable + ": " + value.toString());
                 }
@@ -197,7 +194,7 @@ public class DM {
 
     // Handles failing a site
     public void fail(Instruction instruction) {
-        Integer siteID = instruction.getID();
+        Integer siteID = instruction.getId();
         sites.get(siteID - 1).setSiteState("failed");
 
         Set<Transaction> lockedTransactions = sites.get(siteID - 1).getLockedTransactions();
@@ -214,7 +211,7 @@ public class DM {
 
     // Handles recovering a site
     public void recover(Instruction instruction) {
-        Integer siteID = instruction.getID();
+        Integer siteID = instruction.getId();
         sites.get(siteID - 1).setSiteState("recovered");
         sites.get(siteID - 1).recover();
         failedSites[siteID - 1] = 0;
@@ -268,7 +265,7 @@ public class DM {
 
             if(index % 2 == 0) {
                 for(Site site: sites) {
-                    if(!site.getSiteState().equals("failed") && (T.getOnSites().get(site.getSiteNum()) != 0)
+                    if(!site.getSiteState().equals("failed") && (T.getOnSites().get(site.getId()) != 0)
                        && site.isVariableLocked(variable)) {
                         site.handleLockTable(T, variable, TM.getTime());
                     }
@@ -285,12 +282,65 @@ public class DM {
 
     public void dump(Instruction instruction) {
         ArrayList<Site> sites = this.sites;
-//        if(instruction_split.length > 1){
-//            System.out.println("For now");
-//        } else {``
-//            for(Site site: sites) {
-//                System.out.println(site.toString());
-//            }
-//        }
+        System.out.println("=== output of dump ===");
+        for(Site site: sites){
+            int i = 0;
+            System.out.println("Site " + site.getId().toString());
+            for(HashMap.Entry<String, Variable> variable : site.getAllVariables().entrySet()) {
+                if(variable.getValue().checkCommitted()) {
+                    System.out.println(variable.getKey() + ": " + variable.getValue().getValue());
+                    i++;
+                }
+            }
+            if(i != site.getVariableCount()) {
+                System.out.println("All otther variables have their initial values");
+            }
+            System.out.println("");
+        }
+    }
+
+    public void dump() {
+        System.out.println("\n=== output of dump ===");
+        for(Site site: this.sites){
+            int i = 0;
+            System.out.println("Site " + site.getId().toString());
+            for(HashMap.Entry<String, Variable> variable : site.getAllVariables().entrySet()) {
+                if(variable.getValue().checkCommitted()) {
+                    System.out.println(variable.getKey() + ": " + variable.getValue().getValue());
+                    i++;
+                }
+            }
+            if(i != site.getVariableCount()) {
+                System.out.println("All otther variables have their initial values");
+            }
+            System.out.println("");
+        }
+    }
+
+    public void dump(String x) {
+        System.out.println("\n=== output of dump ===");
+        System.out.println(x);
+        for(Site site: this.sites){
+            if(site.getVariable(x).checkCommitted()){
+                System.out.println("Site " + site.getId().toString() + ": " + site.getVariable(x).getValue());
+            }
+        }
+    }
+
+    public void dump(Integer i) {
+        Site site = sites.get(i);
+        System.out.println("\n=== output of dump ===");
+        int commitCount = 0;
+        System.out.println("Site " + site.getId().toString());
+        for(HashMap.Entry<String, Variable> variable : site.getAllVariables().entrySet()) {
+            if(variable.getValue().checkCommitted()) {
+                System.out.println(variable.getKey() + ": " + variable.getValue().getValue());
+                commitCount++;
+            }
+        }
+        if(commitCount != site.getVariableCount()) {
+            System.out.println("All otther variables have their initial values");
+        }
+        System.out.println("");
     }
 }
