@@ -1,6 +1,20 @@
+/**
+ * <h1>TM</h1>
+ * TM Constructor and its methods.  Handles the task manager tasks.
+ * Main role is creating the tasks and passing the instructions to the
+ * data manager.
+ *
+ * @author  Andres Davila
+ * @author  Pranay Pareek
+ * @since   07-12-2017
+ */
+
 package adb_project;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
 
 
 public class TM {
@@ -11,6 +25,11 @@ public class TM {
     private static HashMap<Integer, Queue<Transaction>> waitQueue;
     private static Integer time = 0;
 
+    /**
+     * Creates a Task Manager Object.  Holds the instructions,
+     * transaction list, variable lock queues and site wait queues
+     * @param instructions - An ArrayList of instruction objects
+     */
     public TM(ArrayList<Instruction> instructions) {
         this.instructions = instructions;
         this.transactionsList = new HashMap<>();
@@ -18,30 +37,56 @@ public class TM {
         this.waitQueue = new HashMap<>();
     }
 
-    public void addTransaction(Integer id, Boolean readOnly, Integer startTime,
-                               Integer variable, Instruction instruction) {
-        Transaction T = new Transaction(id, readOnly, startTime, variable, instruction);
+    /**
+     * Creates a new transaction and adds it to a HashMap
+     * @param id - id of transaction
+     * @param readOnly - whether the transaction is read only
+     * @param startTime - when the transaction was created
+     * @param instruction - instruction object for transaction
+     */
+    private void addTransaction(Integer id, Boolean readOnly, Integer startTime, Instruction instruction) {
+        Transaction T = new Transaction(id, readOnly, startTime, instruction);
         addToTransactionList(id, T);
     }
 
-    public void addToTransactionList(Integer id, Transaction T) {
+
+    /**
+     * Adds a transaction to a HashMap of transactions
+     * @param id - id of transaction
+     * @param T - a transaction
+     */
+    private void addToTransactionList(Integer id, Transaction T) {
         this.transactionsList.put(id, T);
     }
 
-    public Transaction getTransaction(int id) {
+    /**
+     * Returns a transaction object
+     * @param id - id of transaction
+     * @return T - a transaction object
+     */
+    private Transaction getTransaction(int id) {
         return this.transactionsList.get(id);
     }
 
-    public void setTime() {
+    /**
+     * Increments the time during processing
+     */
+    private void setTime() {
         time++;
     }
 
+    /**
+     * Gets the current time during processing
+     * @return Integer - time
+     */
     public static Integer getTime() {
         return time;
     }
 
-    // Instructions handled by the DM are sent to the DM.  Otherwise,
-    // TM handles.
+    /**
+     * Takes each instruction and hands off to the Data Manager where
+     * applicable otherwise executed by the Task Manager
+     */
     public void processInstructions() {
         ArrayList<Instruction> instructions = this.instructions;
         DM dm = new DM();
@@ -52,7 +97,8 @@ public class TM {
             Integer id;
             Transaction transaction;
 
-
+            // Since the instruction list may have instructions for terminated
+            // transactions, a check is added to continue if one is found
             switch (instruction_type) {
                 case "begin":
                     begin(instruction);
@@ -114,43 +160,70 @@ public class TM {
         }
     }
 
-    // Creates the transaction
+    /**
+     * Sets up a transaction
+     * @param instruction - an instruction object
+     */
     public void begin(Instruction instruction) {
 
         Integer startTime = getTime();
         Integer transaction = instruction.getId();
         Boolean readOnly = instruction.getInstruction().contains("RO");
 
-        addTransaction(transaction, readOnly, startTime, null, instruction);
+        addTransaction(transaction, readOnly, startTime, instruction);
     }
 
-    public static Transaction handleLockQueue(String variable) {
-        if(lockQueue.get(variable).size() == 0) {
+    /**
+     * Removes a transaction from a variable lock queue and returns
+     * a transaction object
+     * @param variableId - variable id
+     * @return T - transaction object if there is one on queue
+     */
+    public static Transaction handleLockQueue(String variableId) {
+        if(lockQueue.get(variableId).size() == 0) {
             return null;
         } else {
-            return lockQueue.get(variable).remove();
+            return lockQueue.get(variableId).remove();
         }
     }
 
-    public static void addToLockQueue(String variable, Transaction transaction) {
+    /**
+     * Adds a a transaction to a variable lock queue
+     * a transaction object
+     * @param variableId - variable id
+     * @param transaction - transaction object
+     */
+    public static void addToLockQueue(String variableId, Transaction transaction) {
         transaction.setLockTime();
-        if(lockQueue.get(variable) == null) {
+        if(lockQueue.get(variableId) == null) {
             Queue<Transaction> queue = new LinkedList<>();
             queue.add(transaction);
-            lockQueue.put(variable, queue);
+            lockQueue.put(variableId, queue);
         } else {
-            lockQueue.get(variable).add(transaction);
+            lockQueue.get(variableId).add(transaction);
         }
     }
 
-    public static String peekLockQueue(String variable) {
-        if(lockQueue.get(variable).peek() == null) {
+    /**
+     * Gets the instruction at the start of the start of the queue.  This is to
+     * handle cases where an unlock a variable may have more than one transaction
+     * waiting to read lock it
+     * @param variableId - variable id
+     * @return String - instruction type
+     */
+    public static String peekLockQueue(String variableId) {
+        if(lockQueue.get(variableId).peek() == null) {
             return "N";
         } else {
-            return lockQueue.get(variable).peek().getCurrentInstruction().getInstruction();
+            return lockQueue.get(variableId).peek().getCurrentInstruction().getInstruction();
         }
     }
 
+    /**
+     * Adds a transaction to a sites wait queue when the site is unavailable
+     * @param siteId - site ID
+     * @param transaction - a transaction object
+     */
     public static void addToWaitQueue(Integer siteId, Transaction transaction) {
         if(waitQueue.get(siteId) == null) {
             Queue<Transaction> queue = new LinkedList<>();
@@ -161,6 +234,11 @@ public class TM {
         }
     }
 
+    /**
+     * Gets a transaction from the wait queue if there is one waiting
+     * @param siteId - site ID
+     * @return Transaction - a transaction object
+     */
     public static Transaction getFromWaitQueue(Integer siteId) {
         if(waitQueue.get(siteId).size() == 0) {
             return null;
@@ -169,10 +247,20 @@ public class TM {
         }
     }
 
-    public static Boolean emptyLockQueue(String variable) {
-        return (lockQueue.get(variable) == null || lockQueue.get(variable).size() == 0);
+    /**
+     * Checks to see if a variable's lock queue is empty
+     * @param variableId - string id of a variable
+     * @return Boolean - true/false whether the queue is empty
+     */
+    public static Boolean emptyLockQueue(String variableId) {
+        return (lockQueue.get(variableId) == null || lockQueue.get(variableId).size() == 0);
     }
 
+    /**
+     * Aborts a transaction if terminated for some reason - either because of deadlock or site
+     * failure
+     * @param id - transaction id
+     */
     public void abort(Integer id) {
         for (HashMap.Entry<Integer, Transaction> entry : this.transactionsList.entrySet())
         {

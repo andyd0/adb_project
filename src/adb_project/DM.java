@@ -1,6 +1,21 @@
+/**
+ * <h1>DM</h1>
+ * DM Contructor and its methods.  Handles the data manager tasks.
+ * Main role is to execute transaction instructions on variables and
+ * to manage sites.  DM acts a super data manager.
+ *
+ * @author  Andres Davila
+ * @author  Pranay Pareek
+ * @since   07-12-2017
+ */
+
 package adb_project;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Queue;
+import java.util.Random;
+import java.util.Set;
 
 
 public class DM {
@@ -9,16 +24,19 @@ public class DM {
     private int failedSiteCount;
     private ArrayList<Site> sites;
 
-    // FailedSites = bit vector to keep track of failed sites
-    // A count as well to keep track of count without having to go through
-    // the bit array
-
+    /**
+     * Creates a Data Manager Object.  Keeps tracks of all sites
+     * and a count of how many sites have failed
+     */
     public DM() {
         failedSiteCount = 0;
         sites = initializeSites();
     }
 
-    // Creates the sites for the DM
+    /**
+     * Initializes the sites array list
+     * @return ArrayList - ArrayList of sites
+     */
     private ArrayList<Site> initializeSites() {
         ArrayList<Site> sites = new ArrayList<>();
         for (int i = 1; i <= MAX_SITES; i++) {
@@ -28,8 +46,24 @@ public class DM {
         return sites;
     }
 
-    // Just a wrapper so that the instruction can be sent to the function that
-    // will check for locks etc.
+    /**
+     * Handles all write operations
+     * Checks to see whether the write is to all sites or specific site for odd
+     * variables. Each have their checks to how to handle the write.
+     *
+     * <ul>
+     *      <ol>First the sites are checked to see failed and / or locked.  This check is used
+     *      to allow the transaction to write if there are any sites not in fail state or locked
+     *      variables</ol>
+     *      <ol>If cleared, transaction gets its locks</ol>
+     *      <ol>If the check doesn't clear, then deadlock is checked</ol>
+     *      <ol>If neither of the two, then the site must be in a fail state so add to
+     *          site wait queue</ol>
+     * </ul>
+     *
+     * @param T - Transaction Object
+     * @param instruction - Instruction Object
+     */
     public void write(Transaction T, Instruction instruction) {
 
         String transactionID = "T" + T.getID().toString();
@@ -37,7 +71,6 @@ public class DM {
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
         Integer value = instruction.getValue();
-        String type = instruction.getInstruction();
 
         // Getting a count of failed sites for later checking against what is
         // not locked
@@ -61,7 +94,7 @@ public class DM {
                     }
                 }
 
-                T.addLockedVariable(index);
+                T.addLockedVariable(variable);
                 T.addLockedVariableType(variable, instruction);
 
                 System.out.println(transactionID +" wrote to " + variable + " to all sites " + ": " + value.toString());
@@ -86,7 +119,7 @@ public class DM {
                 } else {
                     site.lockVariable(T, variable, instruction);
 
-                    T.addLockedVariable(index);
+                    T.addLockedVariable(variable);
                     T.addLockedVariableType(variable, instruction);
 
                     System.out.println(transactionID +" wrote to " + variable + " at Site " +
@@ -98,8 +131,28 @@ public class DM {
         }
     }
 
-    // Handles read only or passes read locks to the function that will
-    // check for locks etc
+    /**
+     * Handles all read operations
+     * Checks to see whether the read is to all sites or specific site for odd
+     * variables. Each have their checks to how to handle the read.
+     *
+     * <ul>
+     *      <ol>First checks to see if the transaction already has a write lock on a variable
+     *          and if so reads the value without obtainig a lock</ol>
+     *      <ol>Then the sites are checked to see failed and / or locked.  This check is used
+     *      to allow the transaction to read if there are any sites not in fail state or locked
+     *      variables.</ol>
+     *      <ol>If cleared, transaction gets its read locks.  If a site is in a recovered state, it
+     *      will not a transaction to read an even if the variable has not be written to.  If it's
+     *      odd, the transaction is allowed to read.<</ol>
+     *      <ol>If the check doesn't clear, then deadlock is checked</ol>
+     *      <ol>If neither of the two, then the site must be in a fail state so add to
+     *          site wait queue</ol>
+     * </ul>
+     *
+     * @param T - Transaction Object
+     * @param instruction - Instruction Object
+     */
     public void read(Transaction T, Instruction instruction) {
 
         String transactionID = "T" + T.getID().toString();
@@ -107,7 +160,6 @@ public class DM {
         Integer value = -1;
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
-        String type = instruction.getInstruction();
 
 
         // Making sure that the site being checked is not down
@@ -153,7 +205,7 @@ public class DM {
                                                                       site.getVariable(variable).getOkToRead())) {
                             if (i == 0) {
                                 value = site.getVariable(variable).getValue();
-                                T.addLockedVariable(index);
+                                T.addLockedVariable(variable);
                                 T.addLockedVariableType(variable, instruction);
                                 System.out.println(transactionID +" read " + variable + ": " + value.toString());
                             }
@@ -189,7 +241,7 @@ public class DM {
                 } else {
                     site.lockVariable(T, variable, instruction);
                     value = site.getVariable(variable).getValue();
-                    T.addLockedVariable(index);
+                    T.addLockedVariable(variable);
                     T.addLockedVariableType(variable, instruction);
                     System.out.println(transactionID + " read " + variable + ": " + value.toString());
                 }
@@ -199,7 +251,12 @@ public class DM {
         }
     }
 
-    // Handles failing a site
+    /**
+     * Handles site failure.  Multiple operations are handled here.  Site is marked
+     * as failed and clears the lock table. Also handles the failure of transactions that
+     * had locks on variables on the site.
+     * @param instruction - fail instruction
+     */
     public void fail(Instruction instruction) {
         Integer siteId = instruction.getId();
         sites.get(siteId - 1).setSiteState("failed");
@@ -211,11 +268,20 @@ public class DM {
         failedSiteCount++;
     }
 
+    /**
+     * Gets the current site fail count
+     * @return Integer
+     */
     public Integer getFailCount() {
         return failedSiteCount;
     }
 
-    // Handles recovering a site
+    /**
+     * Handles site recovery.  Multiple operations are handled here.  Site is marked
+     * as recovered and gets the site to start the recovery process using its
+     * defined method.
+     * @param instruction - fail instruction
+     */
     public void recover(Instruction instruction) {
         Integer siteId = instruction.getId();
         sites.get(siteId - 1).setSiteState("recovered");
@@ -223,10 +289,22 @@ public class DM {
         failedSiteCount--;
     }
 
+
+    /**
+     * Handles Deadlock check.  Needs to be implemented
+     * @return Boolean
+     */
     public Boolean deadLockCheck() {
         return false;
     }
 
+    /**
+     * Handles checking of the lock queue when a transaction
+     * releases its locks.  If it's a read, the queue is checked
+     * again to allow other read transactions following it to also
+     * get a lock
+     * @param varId - variable ID
+     */
     private void checkLockQueue(String varId) {
 
         if(!TM.emptyLockQueue(varId)) {
@@ -250,6 +328,10 @@ public class DM {
         }
     }
 
+    /**
+     * Removes transactions from a lock table if they have been aborted
+     * @param lockedTransactions - set of transaction objects
+     */
     public void removeTransLock(Set<Transaction> lockedTransactions) {
         for(Site site : sites) {
             for(Transaction T : lockedTransactions)
@@ -257,14 +339,19 @@ public class DM {
         }
     }
 
-     // Ends a transaction
+    /**
+     * Terminates a transaction.  The function checks the queue of
+     * locked variables in the transaction object and handles the commits
+     * and lock releases.
+     * @param T - transaction object
+     */
     public void end(Transaction T) {
 
-        Queue<Integer> variables = T.getVariablesLocked();
+        Queue<String> variables = T.getVariablesLocked();
 
         while(!variables.isEmpty()) {
-            Integer index = variables.remove();
-            String variable = "x" + index.toString();
+            String variable = variables.remove();
+            Integer index = Integer.parseInt(variable.replaceAll("\\D+",""));
 
             if(index % 2 == 0) {
                 for(Site site: sites) {
@@ -283,6 +370,9 @@ public class DM {
         T.stopTransaction();
     }
 
+    /**
+     * Prints all committed variables at all sites sorted by site
+     */
     public void dump() {
         System.out.println("\n=== output of dump ===");
         for(Site site: this.sites){
@@ -301,6 +391,11 @@ public class DM {
         }
     }
 
+    /**
+     * Dump function that prints out the committed values of a specific
+     * variable at all sites
+     * @param x - variable ID
+     */
     public void dump(String x) {
         System.out.println("\n=== output of dump ===");
         System.out.println(x);
@@ -311,6 +406,11 @@ public class DM {
         }
     }
 
+    /**
+     * Dump function that prints out the variables that have been
+     * committed at a site
+     * @param i - site ID
+     */
     public void dump(Integer i) {
         Site site = sites.get(i);
         System.out.println("\n=== output of dump ===");

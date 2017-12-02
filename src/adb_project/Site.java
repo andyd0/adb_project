@@ -1,3 +1,12 @@
+/**
+ * <h1>Site</h1>
+ * Methods and Construction for a site
+ *
+ * @author  Andres Davila
+ * @author  Pranay Pareek
+ * @since   07-12-2017
+ */
+
 package adb_project;
 
 import java.util.*;
@@ -6,28 +15,29 @@ public class Site {
 
     private Integer id;
     private HashMap<String, Variable> variables;
-
-    /*
-      Java doesn't have tuple types so using a hashmap to emulate it:
-      This is a hashmap with Variable as the key and it's value is
-      a tuple-like record created using a single record hashmap.
-
-
-      This looks like [Variable -> [TransactionID, Instruction]]
-
-      TODO: State for a site is 4 - failed, recovered, recovered and written to and running.  Handle with string?
-
-      States: "running", "failed", "recovered", "recovered_written"
-    */
     private HashMap<String, HashMap<Transaction, Instruction>> lockTable;
     private String state;
 
+    /**
+     * Creates a Site object
+     * @param id - site ID
+     *
+     * <ul>
+     *      <li>variables - variables on the site</li>
+     *      <li>lockTable - Java doesn't have tuple types so using a hashmap to emulate it:
+     *          This is a hashmap with Variable as the key and it's value is
+     *          a tuple-like record created using a single record hashmap.
+     *          This looks like [Variable -> [TransactionID, Instruction]]</li>
+     *      <li>Possible states for a Site - running, failed, recovered</li>
+     * </ul>
+     */
     public Site(Integer id) {
         this.id = id;
         this.state = "running";
         this.variables = new HashMap<>();
         this.lockTable = initializeLockTable();
 
+        // Only adds applicable variables to the site
         for (int i = 1; i <= 20; i++) {
             Variable v = new Variable(i);
 
@@ -39,28 +49,35 @@ public class Site {
         }
     }
 
-    public String toString() {
-        String result = "";
-        result += "Site: " + id;
-        return result;
-    }
-
-    // Handles setting the failed / recover state of the site
-    // Methods for recover / fail are at the DM now
-
+    /**
+     * Sets the current state of a transaction
+     * @param state - string of site's current state
+     */
     public void setSiteState(String state) {
         this.state = state;
     }
 
+    /**
+     * Gets the current state of a site
+     * @return String - gets the current state of a site
+     */
     public String getSiteState() {
         return state;
     }
 
+    /**
+     * Gets the site ID
+     * @return Integer - gets the site ID
+     */
     public Integer getId() {
         return id;
     }
 
-    // check if variable exists on this site by supplying variable object
+    /**
+     * Check if variable exists on this site by supplying variable object
+     * @param x - Variable object
+     * @return Boolean
+     */
     public Boolean hasVariable(Variable x) {
 
         for (HashMap.Entry<String, Variable> entry : this.variables.entrySet())
@@ -72,26 +89,47 @@ public class Site {
         return false;
     }
 
-    // check if variable exists on this site by supplying variable id
+    /**
+     * check if variable exists on this site by supplying variable id
+     * @param id - variable ID string
+     * @return Boolean
+     */
     public Boolean hasVariable(String id) {
         return (variables.get(id) == null);
     }
 
-    // get all variables on this site
+    /**
+     * HashMap of all variables on this site
+     * @return HashMap
+     */
     public HashMap<String, Variable> getAllVariables() {
         return variables;
     }
 
-    // get specific variable by supplying its id
+    /**
+     * Gets specific variable by supplying its id
+     * @param id - variable ID string
+     * @return Variable - variable object
+     */
     public Variable getVariable(String id) {
         return variables.get(id);
     }
 
-    // get variable's data by supplying its id
+    /**
+     * Get variable's value by supplying its id
+     * @param id - variable ID string
+     * @return Integer - variable's value
+     */
     public Integer getVariableValue(String id) {
         return variables.get(id).getValue();
     }
 
+    /**
+     * Updates a variable's value at transaction commit
+     * @param id - variable ID string
+     * @param value - value of variable
+     * @param time - time when variable was updated
+     */
     public void updateVariable(String id, Integer value, Integer time) {
         variables.get(id).updateValue(value, time);
         variables.get(id).valueCommitted();
@@ -100,14 +138,24 @@ public class Site {
         }
     }
 
+    /**
+     * Adds a transaction to a variable's lock table HashMap
+     * @param t - transaction object
+     * @param varId - variable ID
+     * @param instruction - instruction object
+     */
     public void lockVariable(Transaction t, String varId, Instruction instruction) {
         lockTable.get(varId).put(t, instruction);
         t.plusOnSites(this.id);
     }
 
-    // When a transaction commits, checks to see if it was a write
-    // instruction and updates value.  For both R/W it will remove
-    // from lock queue
+    /**
+     * When a transaction commits, checks to see if it was a write instruction and updates value.
+     * For both R/W it will remove from lock queue
+     * @param t - transaction object
+     * @param varId - variable ID
+     * @param time - time when variable is updated
+     */
     public void handleLockTable(Transaction t, String varId, Integer time) {
         Instruction instruction = lockTable.get(varId).get(t);
         if(instruction.getInstruction().equals("W")) {
@@ -118,6 +166,13 @@ public class Site {
         t.decOnSites(this.id);
     }
 
+    /**
+     * Checks to see whether a variable is write locked.  Really just to handle
+     * the times where a transaction is trying to read a variable it has a write
+     * lock on
+     * @param varId - variable ID
+     * @return Boolean - true/false if variable is write locked
+     */
     public boolean isVariableWriteLocked(String varId) {
 
         if(lockTable.size() != 0 && lockTable.get(varId).size() != 0) {
@@ -131,15 +186,27 @@ public class Site {
         }
     }
 
+    /**
+     * Checks to see whether a variable is locked.
+     * @param varId - variable ID
+     * @return Boolean - true/false if variable is locked
+     */
     public boolean isVariableLocked(String varId) {
         return (lockTable.get(varId).size() != 0);
     }
 
+    /**
+     * Clears the lock table when a site fails
+     */
     public void clearLocktable() {
         this.lockTable = new HashMap<>();
     }
 
     // TODO: This should not create a table for all 20 variables.  Just relevant ones
+    /**
+     * Initializes lock table
+     * @return HashMap - Nested HashMap - variable and it's transaction / instruction
+     */
     private HashMap<String, HashMap<Transaction, Instruction>> initializeLockTable() {
 
         HashMap<String, HashMap<Transaction, Instruction>> temp = new HashMap<>();
@@ -150,6 +217,10 @@ public class Site {
         return temp;
     }
 
+    /**
+     * Returns a set of transactions that have locks on a site
+     * @return Set - locked transaction objects
+     */
     public Set<Transaction> getLockedTransactions(){
         Set<Transaction> lockedTransactions = new HashSet<>();
         for (HashMap.Entry<String, HashMap<Transaction, Instruction>> entry : this.lockTable.entrySet()) {
@@ -160,6 +231,10 @@ public class Site {
         return lockedTransactions;
     }
 
+    /**
+     * Removes a transaction from a lock the site's lock table
+     * @param T - transaction object
+     */
     public void removeFromLockTable(Transaction T) {
         for (HashMap.Entry<String, HashMap<Transaction, Instruction>> entry : this.lockTable.entrySet()) {
             for (HashMap.Entry<Transaction, Instruction> tEntry : entry.getValue().entrySet()) {
@@ -170,19 +245,19 @@ public class Site {
         }
     }
 
-    public Boolean checkTransWriteLock(String variable, Transaction T) {
-        HashMap<Transaction, Instruction> check = lockTable.get(variable);
-        if(check.get(T) != null && check.get(T).getInstruction().equals("W")) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
+    /**
+     * Count of variables on the site
+     * @return Integer - count of variables on the site
+     */
     public Integer getVariableCount() {
         return variables.size();
     }
 
+    /**
+     * When a site is recoved, variables are set to whether they can be
+     * read from (odd) or not (even).  Also initializes the lock table
+     * since it was wiped out when the site failed
+     */
     public void recover() {
         for (HashMap.Entry<String, Variable> entry : this.variables.entrySet()) {
             Integer id = Integer.parseInt(entry.getKey().replaceAll("\\D+",""));
@@ -193,5 +268,15 @@ public class Site {
             }
         }
         lockTable = initializeLockTable();
+    }
+
+    /**
+     * toString method for a site object
+     * @return String - details of a Site
+     */
+    public String toString() {
+        String result = "";
+        result += "Site: " + id;
+        return result;
     }
 }
