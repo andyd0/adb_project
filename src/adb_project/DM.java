@@ -16,13 +16,15 @@ import java.util.HashMap;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-
+import java.util.HashSet;
+import java.util.Iterator;
 
 public class DM {
 
     private final Integer MAX_SITES = 10;
     private int failedSiteCount;
     private ArrayList<Site> sites;
+    private Set<String> safeTransactionSet = new HashSet<String>();
 
     /**
      * Creates a Data Manager Object.  Keeps tracks of all sites
@@ -100,7 +102,7 @@ public class DM {
                 System.out.println(transactionID +" wrote to " + variable + " to all sites " + ": " + value.toString());
 
               // This needs to be implemented
-            } else if(deadLockCheck()) {
+            } else if(deadLockCheck(T, instruction)) {
                 TM.abort(T);
                 // Since the variable is locked or cannot be accessed,
                 // add to lock queue
@@ -216,7 +218,7 @@ public class DM {
                         }
                     }
                 // This needs to be implemented
-                } else if(deadLockCheck()) {
+                } else if(deadLockCheck(T, instruction)) {
                     TM.abort(T);
                     // Since the variable is locked or cannot be accessed,
                     // add to lock queue
@@ -294,7 +296,75 @@ public class DM {
      * Handles Deadlock check.  Needs to be implemented
      * @return Boolean
      */
-    public Boolean deadLockCheck() {
+    public Boolean deadLockCheck(Transaction T, Instruction instruction) {
+        //return false;
+        String transactionID = "T" + T.getID().toString();
+        Integer index = instruction.getVariable();
+        String variable = "x" + index.toString();
+        Integer siteId;
+        Site site;
+
+        // 1. get the site on which the current variable exists
+        if(index % 2 == 0) {
+            Random randomGenerator = new Random();
+            site = sites.get(randomGenerator.nextInt(9));
+
+            while(!site.getSiteState().equals("running")) {
+                siteId = randomGenerator.nextInt(9);
+                site = sites.get(siteId - 1);
+            }
+        } else {
+            siteId = 1 + index % 10;
+            site = sites.get(siteId - 1);
+        }
+
+        // 2. using site info: get transaction (Tw) that holds a lock on the current variable
+        /*
+
+        TODO: implement getTransactionThatLockedVariable(variableId) in Site.java
+
+        Transaction Tw = s.getTransactionThatLockedVariable(variableId);
+
+        if (tw == null) {
+            // no transaction already locking the variable, safe scenario so continue
+            return false;
+        }
+
+        */
+
+        // 3. if Tw exists then the current transaction (T from the function args)
+        // will need to wait on Tw
+
+        /*
+
+        // Check if Tw already exists in the set, if it does, this will lead to a cycle
+
+        existingTransactionId = "T" + Tw.getID().toString()
+
+        if (this.safeTransactionSet.contains(existingTransactionId)) {
+            // deadlock exists so we remove this transaction from the safe set
+            // and abort it following the deadLockCheck inside the write() and read() functions
+
+            this.safeTransactionSet.remove(existingTransactionId);
+            return true;
+        } else {
+            this.safeTransactionSet.add("T" + T.getID().toString());
+            this.safeTransactionSet.add("T" + Tw.getID().toString());
+        }
+
+        System.out.println("----------");
+        System.out.println("safeTransactionSet currently has:");
+
+        // Print Transaction IDs already existing in the set
+        Iterator<String> iterator = safeTransactionSet.iterator();
+        while (iterator.hasNext()) {
+            String name = iterator.next();
+            System.out.println(name);
+        }
+
+        System.out.println("----------");
+        */
+
         return false;
     }
 
