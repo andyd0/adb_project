@@ -67,6 +67,7 @@ public class DM {
      * @param instruction - Instruction Object
      */
     public void write(Transaction T, Instruction instruction) {
+        deadLockCheck(T, instruction);
 
         String transactionID = "T" + T.getID().toString();
 
@@ -102,7 +103,7 @@ public class DM {
                 System.out.println(transactionID +" wrote to " + variable + " to all sites " + ": " + value.toString());
 
               // This needs to be implemented
-            } else if(deadLockCheck(T, instruction)) {
+            } /*else if(deadLockCheck(T, instruction)) {
                 System.out.println("Deadlock exists");
                 // TM.abort(T);
                 // Since the variable is locked or cannot be accessed,
@@ -110,7 +111,7 @@ public class DM {
 
                 // TM.abort(T.getID());
                 // this.safeTransactionSet.remove(T.getID());
-            } else {
+            } */ else {
                 TM.addToLockQueue(variable, T);
             }
 
@@ -160,6 +161,7 @@ public class DM {
      * @param instruction - Instruction Object
      */
     public void read(Transaction T, Instruction instruction) {
+        deadLockCheck(T, instruction);
 
         String transactionID = "T" + T.getID().toString();
 
@@ -222,7 +224,7 @@ public class DM {
                         }
                     }
                 // This needs to be implemented
-                } else if(deadLockCheck(T, instruction)) {
+                } /*else if(deadLockCheck(T, instruction)) {
                     System.out.println("Deadlock exists");
                     // TM.abort(T);
                     // Since the variable is locked or cannot be accessed,
@@ -230,7 +232,7 @@ public class DM {
 
                     // TM.abort(T.getID());
                     // this.safeTransactionSet.remove(T.getID());
-                } else {
+                } */else {
                     TM.addToLockQueue(variable, T);
                 }
             }
@@ -344,9 +346,9 @@ public class DM {
             System.out.println("---------- DEADLOCK FOUND ----------");
             return true;
         } else {
-            System.out.print("Adding current Transaction: T" + T.getID().toString());
-            System.out.print(" and existing Transaction Tw: T" + Tw.getID().toString());
-            System.out.print(" to the safeset\n");
+            //System.out.print("Adding current Transaction: T" + T.getID().toString());
+            //System.out.print(" and existing Transaction Tw: T" + Tw.getID().toString());
+            //System.out.print(" to the safeset\n");
             this.safeTransactionSet.add("T" + T.getID().toString());
             this.safeTransactionSet.add("T" + Tw.getID().toString());
         }
