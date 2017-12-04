@@ -26,6 +26,9 @@ public class DM {
     private ArrayList<Site> sites;
     private Set<String> safeTransactionSet = new HashSet<String>();
 
+    private HashMap<String, Integer> varInstructionTracker = new HashMap<String, Integer>();
+    private Set<String> transactionSet = new HashSet<String>();
+
     /**
      * Creates a Data Manager Object.  Keeps tracks of all sites
      * and a count of how many sites have failed
@@ -301,10 +304,42 @@ public class DM {
     }
 
 
+    //private HashMap<String, Integer> varInstructionTracker = new HashMap<String, Integer>();
+    //private Set<String> transactionSet = new HashSet<String>();
+
+    public Boolean deadLockCheck(Transaction T, Instruction instruction) {
+        String transactionID = "T" + T.getID().toString();
+        Integer index = instruction.getVariable();
+        String variable = "x" + index.toString();
+
+        //keep track of number of transactions
+        this.transactionSet.add(transactionID);
+
+        //for each key (eg. Wx1, Wx2, Rx2 etc) keep track of the number of accesses
+        String key = instruction.getInstruction() + "x" + instruction.getVariable();
+        if (varInstructionTracker.get(key) != null) {
+            // if key already exists, increment the count
+            Integer val = varInstructionTracker.get(key);
+            val++;
+            varInstructionTracker.put(key, val);
+
+            if (key.substring(0,1).equals("W")) {
+                if (val >= transactionSet.size()) {
+                    System.out.println("--------- DEADLOCK FOUND ---------");
+                }
+            }
+        } else {
+            // if key doesn't exist, put it in the instruction tracker
+            varInstructionTracker.put(key, 0);
+        }
+        return false;
+    }
+
     /**
      * Handles Deadlock check.  Needs to be implemented
      * @return Boolean
      */
+    /*
     public Boolean deadLockCheck(Transaction T, Instruction instruction) {
         String transactionID = "T" + T.getID().toString();
         Integer index = instruction.getVariable();
@@ -340,10 +375,20 @@ public class DM {
         // Check if Tw already exists in the set, if it does, this will lead to a cycle
         String existingTransactionId = "T" + Tw.getID().toString();
         Integer existingTID = Tw.getID();
+
+        System.out.println("-------- existingTransactionId: " + existingTransactionId);
+        System.out.println("-------- transactionID: " + transactionID);
+
+        if (existingTransactionId.equals(transactionID)) {
+            System.out.println("-------- Same transaction found!");
+            return false;
+        }
+
         if (this.safeTransactionSet.contains(existingTransactionId)) {
             // deadlock exists so we remove this transaction from the safe set
             // and abort it
             System.out.println("---------- DEADLOCK FOUND ----------");
+            this.safeTransactionSet.remove(T.getID());
             return true;
         } else {
             //System.out.print("Adding current Transaction: T" + T.getID().toString());
@@ -353,7 +398,6 @@ public class DM {
             this.safeTransactionSet.add("T" + Tw.getID().toString());
         }
 
-        /*
         System.out.println("----------");
         System.out.println("safeTransactionSet currently has:");
 
@@ -365,9 +409,9 @@ public class DM {
         }
 
         System.out.println("----------");
-        */
         return false;
     }
+    */
 
     /**
      * Handles checking of the lock queue when a transaction
@@ -438,6 +482,7 @@ public class DM {
             }
             checkLockQueue(variable);
         }
+        //this.safeset.remove()
         T.stopTransaction();
     }
 
