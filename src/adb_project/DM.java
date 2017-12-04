@@ -24,10 +24,10 @@ public class DM {
     private final Integer MAX_SITES = 10;
     private int failedSiteCount;
     private ArrayList<Site> sites;
-    private Set<String> safeTransactionSet = new HashSet<String>();
+    private Set<String> safeTransactionSet = new HashSet<>();
 
-    private HashMap<String, Integer> varInstructionTracker = new HashMap<String, Integer>();
-    private Set<String> transactionSet = new HashSet<String>();
+    private HashMap<String, HashMap<String, Integer>> varInstructionTracker = new HashMap<>();
+    private Set<String> transactionSet = new HashSet<>();
 
     /**
      * Creates a Data Manager Object.  Keeps tracks of all sites
@@ -316,21 +316,47 @@ public class DM {
         this.transactionSet.add(transactionID);
 
         //for each key (eg. Wx1, Wx2, Rx2 etc) keep track of the number of accesses
-        String key = instruction.getInstruction() + "x" + instruction.getVariable();
-        if (varInstructionTracker.get(key) != null) {
+        //String key = instruction.getInstruction() + "x" + instruction.getVariable();
+        if (varInstructionTracker.get(variable) != null) {
             // if key already exists, increment the count
-            Integer val = varInstructionTracker.get(key);
-            val++;
-            varInstructionTracker.put(key, val);
+            HashMap<String, Integer> temp = varInstructionTracker.get(variable);
+            Boolean check = false;
+            String type = instruction.getInstruction();
 
-            if (key.substring(0,1).equals("W")) {
-                if (val >= transactionSet.size()) {
-                    System.out.println("--------- DEADLOCK FOUND ---------");
+            if(temp.get(type) != null){
+                temp.put(type, temp.get(type) + 1);
+            } else {
+                temp.put(type, 1);
+            }
+
+            varInstructionTracker.put(variable, temp);
+
+            int count = 0;
+            int read = 0;
+            int write = 0;
+
+            for(HashMap.Entry<String, HashMap<String, Integer>> vars : varInstructionTracker.entrySet()) {
+                for(HashMap.Entry<String, Integer> op : vars.getValue().entrySet()) {
+                    if(op.getKey().equals("R")) {
+                        read = op.getValue();
+                    } else {
+                        write = op.getValue();
+                    }
+                }
+                if((read >= 1 && write == 1) || (write == 2)) {
+                    count++;
                 }
             }
+
+            if(count == transactionSet.size()) {
+                System.out.println(transactionID + " aborted due to attempted lock on variable " + variable);
+            }
+
         } else {
             // if key doesn't exist, put it in the instruction tracker
-            varInstructionTracker.put(key, 0);
+            HashMap<String, Integer> temp = new HashMap<>();
+            temp.put(instruction.getInstruction(), 1);
+            varInstructionTracker.put(variable, temp);
         }
         return false;
     }

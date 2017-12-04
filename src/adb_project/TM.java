@@ -261,7 +261,7 @@ public class TM {
      * failure
      * @param id - transaction id
      */
-    public void abort(Integer id) {
+    private void abort(Integer id) {
         for (HashMap.Entry<Integer, Transaction> entry : this.transactionsList.entrySet())
         {
             HashMap<Integer, Integer> sites = entry.getValue().getOnSites();
