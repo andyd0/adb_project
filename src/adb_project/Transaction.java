@@ -212,6 +212,10 @@ public class Transaction {
             onSites.put(siteId, onSites.get(siteId) - 1);
     }
 
+    public HashMap<String, Instruction> getVariablesLockType() {
+        return variablesLockType;
+    }
+
     /**
      * toString method for a transaction object
      * @return String - details of a transaction

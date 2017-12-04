@@ -17,14 +17,13 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.Iterator;
+
 
 public class DM {
 
     private final Integer MAX_SITES = 10;
     private int failedSiteCount;
     private ArrayList<Site> sites;
-    private Set<String> safeTransactionSet = new HashSet<>();
 
     private HashMap<String, HashMap<String, Integer>> varInstructionTracker = new HashMap<>();
     private Set<String> transactionSet = new HashSet<>();
@@ -70,7 +69,6 @@ public class DM {
      * @param instruction - Instruction Object
      */
     public void write(Transaction T, Instruction instruction) {
-        deadLockCheck(T, instruction);
 
         String transactionID = "T" + T.getID().toString();
 
@@ -94,8 +92,8 @@ public class DM {
             }
 
             if(not_locked >= failCheck) {
-                for(Site site: sites){
-                    if(!site.getSiteState().equals("failed")) {
+                for (Site site : sites) {
+                    if (!site.getSiteState().equals("failed")) {
                         site.lockVariable(T, variable, instruction);
                     }
                 }
@@ -103,18 +101,9 @@ public class DM {
                 T.addLockedVariable(variable);
                 T.addLockedVariableType(variable, instruction);
 
-                System.out.println(transactionID +" wrote to " + variable + " to all sites " + ": " + value.toString());
+                System.out.println(transactionID + " wrote to " + variable + " to all sites " + ": " + value.toString());
 
-              // This needs to be implemented
-            } /*else if(deadLockCheck(T, instruction)) {
-                System.out.println("Deadlock exists");
-                // TM.abort(T);
-                // Since the variable is locked or cannot be accessed,
-                // add to lock queue
-
-                // TM.abort(T.getID());
-                // this.safeTransactionSet.remove(T.getID());
-            } */ else {
+            } else {
                 TM.addToLockQueue(variable, T);
             }
 
@@ -164,7 +153,6 @@ public class DM {
      * @param instruction - Instruction Object
      */
     public void read(Transaction T, Instruction instruction) {
-        deadLockCheck(T, instruction);
 
         String transactionID = "T" + T.getID().toString();
 
@@ -226,16 +214,7 @@ public class DM {
                             TM.addToWaitQueue(site.getId(), T);
                         }
                     }
-                // This needs to be implemented
-                } /*else if(deadLockCheck(T, instruction)) {
-                    System.out.println("Deadlock exists");
-                    // TM.abort(T);
-                    // Since the variable is locked or cannot be accessed,
-                    // add to lock queue
-
-                    // TM.abort(T.getID());
-                    // this.safeTransactionSet.remove(T.getID());
-                } */else {
+                } else {
                     TM.addToLockQueue(variable, T);
                 }
             }
@@ -276,7 +255,9 @@ public class DM {
         sites.get(siteId - 1).setSiteState("failed");
 
         Set<Transaction> lockedTransactions = sites.get(siteId - 1).getLockedTransactions();
-        removeTransLock(lockedTransactions);
+
+        for(Transaction T : lockedTransactions)
+            abort(T, "site");
 
         sites.get(siteId - 1).clearLocktable();
         failedSiteCount++;
@@ -320,7 +301,6 @@ public class DM {
         if (varInstructionTracker.get(variable) != null) {
             // if key already exists, increment the count
             HashMap<String, Integer> temp = varInstructionTracker.get(variable);
-            Boolean check = false;
             String type = instruction.getInstruction();
 
             if(temp.get(type) != null){
@@ -346,10 +326,14 @@ public class DM {
                 if((read >= 1 && write == 1) || (write == 2)) {
                     count++;
                 }
+                read = 0;
+                write = 0;
             }
 
             if(count == transactionSet.size()) {
                 System.out.println(transactionID + " aborted due to attempted lock on variable " + variable);
+                abort(T, "cycle");
+                return true;
             }
 
         } else {
@@ -360,84 +344,6 @@ public class DM {
         }
         return false;
     }
-
-    /**
-     * Handles Deadlock check.  Needs to be implemented
-     * @return Boolean
-     */
-    /*
-    public Boolean deadLockCheck(Transaction T, Instruction instruction) {
-        String transactionID = "T" + T.getID().toString();
-        Integer index = instruction.getVariable();
-        String variable = "x" + index.toString();
-        Integer siteId;
-        Site site;
-
-        // 1. get the site on which the current variable exists
-        if(index % 2 == 0) {
-            Random randomGenerator = new Random();
-            site = sites.get(randomGenerator.nextInt(9));
-
-            while(!site.getSiteState().equals("running")) {
-                siteId = randomGenerator.nextInt(9);
-                site = sites.get(siteId - 1);
-            }
-        } else {
-            siteId = 1 + index % 10;
-            site = sites.get(siteId - 1);
-        }
-
-        // 2. using site info: get transaction (Tw) that holds a lock on the current variable
-        Transaction Tw = site.getTransactionThatLockedVariable(variable);
-
-        // no transaction already locking the variable, this is safe so continue
-        if (Tw == null) {
-            return false;
-        }
-
-        // 3. if Tw exists then the current transaction (T from the function args)
-        // will need to wait on Tw
-
-        // Check if Tw already exists in the set, if it does, this will lead to a cycle
-        String existingTransactionId = "T" + Tw.getID().toString();
-        Integer existingTID = Tw.getID();
-
-        System.out.println("-------- existingTransactionId: " + existingTransactionId);
-        System.out.println("-------- transactionID: " + transactionID);
-
-        if (existingTransactionId.equals(transactionID)) {
-            System.out.println("-------- Same transaction found!");
-            return false;
-        }
-
-        if (this.safeTransactionSet.contains(existingTransactionId)) {
-            // deadlock exists so we remove this transaction from the safe set
-            // and abort it
-            System.out.println("---------- DEADLOCK FOUND ----------");
-            this.safeTransactionSet.remove(T.getID());
-            return true;
-        } else {
-            //System.out.print("Adding current Transaction: T" + T.getID().toString());
-            //System.out.print(" and existing Transaction Tw: T" + Tw.getID().toString());
-            //System.out.print(" to the safeset\n");
-            this.safeTransactionSet.add("T" + T.getID().toString());
-            this.safeTransactionSet.add("T" + Tw.getID().toString());
-        }
-
-        System.out.println("----------");
-        System.out.println("safeTransactionSet currently has:");
-
-        // Print Transaction IDs already existing in the set
-        Iterator<String> iterator = safeTransactionSet.iterator();
-        while (iterator.hasNext()) {
-            String name = iterator.next();
-            System.out.println(name);
-        }
-
-        System.out.println("----------");
-        return false;
-    }
-    */
 
     /**
      * Handles checking of the lock queue when a transaction
@@ -470,13 +376,33 @@ public class DM {
     }
 
     /**
-     * Removes transactions from a lock table if they have been aborted
-     * @param lockedTransactions - set of transaction objects
+     * Removes transactions from a lock table if they have been `ed
+     * @param T - a transaction object
      */
-    public void removeTransLock(Set<Transaction> lockedTransactions) {
+    public void removeTransLock(Transaction T) {
         for(Site site : sites) {
-            for(Transaction T : lockedTransactions)
             site.removeFromLockTable(T);
+        }
+    }
+
+    private void abort(Transaction T, String failureType) {
+        TM.abort(T);
+        transactionSet.remove("T" + T.getID());
+        HashMap<String, Instruction> variablesLocked = T.getVariablesLockType();
+
+        for(HashMap.Entry<String, Instruction> variable : variablesLocked.entrySet()) {
+            String type = variable.getValue().getInstruction();
+            HashMap<String, Integer> temp = varInstructionTracker.get(variable.getKey());
+            temp.put(type, temp.get(type) - 1);
+            varInstructionTracker.put(variable.getKey(), temp);
+        }
+
+        removeTransLock(T);
+
+        Queue<String> variables = T.getVariablesLocked();
+
+        while(!variables.isEmpty()) {
+            checkLockQueue(variables.remove());
         }
     }
 
