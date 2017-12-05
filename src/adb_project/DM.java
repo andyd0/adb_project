@@ -27,8 +27,7 @@ public class DM {
     private int failedSiteCount;
     private ArrayList<Site> sites;
     private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
-    private HashMap<String, HashMap<String, Integer>> varInstructionTracker = new HashMap<>();
-    private Set<String> transactionSet = new HashSet<>();
+    private Set<Transaction> transactionSet = new HashSet<>();
 
     /**
      * Creates a Data Manager Object.  Keeps tracks of all sites
@@ -298,7 +297,7 @@ public class DM {
         String type = instruction.getInstruction();
         Pair<String, String> transType = new Pair<>(type, transactionID);
         //keep track of number of transactions
-        this.transactionSet.add(transactionID);
+        this.transactionSet.add(T);
 
         //private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
 
@@ -312,15 +311,21 @@ public class DM {
             for(int i = 0; i < temp.size(); i++) {
                 for(Pair pair : temp.get(i)) {
                     String pairType = pair.getKey().toString();
-                    if((pairType.equals("R") && type.equals("R")) || pair.getValue().toString().equals(transactionID)) {
+                    if((pairType.equals("R") && type.equals("R"))) {
+                        append = true;
+                        for(Pair check : temp.get(i)) {
+                            if(check.getKey().equals("W")) {
+                                append = false;
+                                break;
+                            }
+                        }
+                    } else if (pair.getValue().toString().equals(transactionID)) {
                         append = true;
                         break;
                     }
                 }
                 if(append) {
-                    LinkedList<Pair> tempList = new LinkedList<>();
-                    tempList.add(transType);
-                    temp.add(tempList);
+                    temp.get(i).add(transType);
                     variableTracker.put(variable, temp);
                     break;
                 }
@@ -339,20 +344,28 @@ public class DM {
                 int interim = 0;
                 for(LinkedList<Pair> lists : vars.getValue()) {
                     if(lists.size() > 0)
-                        interim += lists.size();
+                        interim++;
                 }
                 if(interim >= 2) count++;
             }
 
             if(count == transactionSet.size()) {
-                System.out.println(transactionID + " aborted due to attempted lock on variable " + variable);
-                abort(T);
+                Transaction tAbort = T;
+                Integer age = T.getStartTime();
+                for(Transaction t : transactionSet) {
+                    if(t.getStartTime() > age) {
+                        tAbort = t;
+                        age = t.getStartTime();
+                    }
+                }
+                System.out.println("T" + tAbort.getID().toString() + " ABORTED due to attempted lock on variable "
+                                   + variable);
+                abort(tAbort);
                 return true;
             }
 
         } else {
             // if key doesn't exist, put it in the instruction tracker
-
             LinkedList<Pair> tempList = new LinkedList<>();
             tempList.add(transType);
             ArrayList<LinkedList<Pair>> tempArray = new ArrayList<>();

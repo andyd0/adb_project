@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 
-
 public class TM {
 
     private ArrayList<Instruction> instructions;
@@ -164,7 +163,6 @@ public class TM {
                     dm.end(this.getTransaction(id));
                     break;
             }
-            incrementLockTimes();
         }
     }
 
@@ -199,16 +197,15 @@ public class TM {
      * Adds a a transaction to a variable lock queue
      * a transaction object
      * @param variableId - variable id
-     * @param transaction - transaction object
+     * @param T - transaction object
      */
-    public static void addToLockQueue(String variableId, Transaction transaction) {
-        transaction.setLockTime();
+    public static void addToLockQueue(String variableId, Transaction T) {
         if(lockQueue.get(variableId) == null) {
             Queue<Transaction> queue = new LinkedList<>();
-            queue.add(transaction);
+            queue.add(T);
             lockQueue.put(variableId, queue);
         } else {
-            lockQueue.get(variableId).add(transaction);
+            lockQueue.get(variableId).add(T);
         }
     }
 
@@ -315,9 +312,5 @@ public class TM {
             }
             waitQueue.put(locks.getKey(), newQueue);
         }
-    }
-
-    private void incrementLockTimes() {
-
     }
 }
