@@ -22,10 +22,10 @@ public class Driver {
         String path = "";
         String cwd = System.getProperty("user.dir");
 
-        Boolean testAll = false;
+        Boolean testAll = true;
 
         if (testAll) {
-          for (int i=1; i<20; i++) {
+          for (int i=1; i<22; i++) {
             if (i < 10) {
               path = cwd + "/tests/input_" + i + ".txt";
             } else {
@@ -45,7 +45,7 @@ public class Driver {
         } else {
           if (args.length == 0) {
               System.out.println("No test file specified in args, using path\n");
-              path = cwd + "/tests/input_21.txt";
+              path = cwd + "/tests/input_1.txt";
           } else {
               path = cwd + "/" + args[0];
           }

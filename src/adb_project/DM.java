@@ -13,10 +13,12 @@ package adb_project;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.HashSet;
+import javafx.util.Pair;
 
 
 public class DM {
@@ -24,7 +26,7 @@ public class DM {
     private final Integer MAX_SITES = 10;
     private int failedSiteCount;
     private ArrayList<Site> sites;
-
+    private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
     private HashMap<String, HashMap<String, Integer>> varInstructionTracker = new HashMap<>();
     private Set<String> transactionSet = new HashSet<>();
 
@@ -257,7 +259,7 @@ public class DM {
         Set<Transaction> lockedTransactions = sites.get(siteId - 1).getLockedTransactions();
 
         for(Transaction T : lockedTransactions)
-            abort(T, "site");
+            abort(T);
 
         sites.get(siteId - 1).clearLocktable();
         failedSiteCount++;
@@ -289,58 +291,73 @@ public class DM {
     //private Set<String> transactionSet = new HashSet<String>();
 
     public Boolean deadLockCheck(Transaction T, Instruction instruction) {
+
         String transactionID = "T" + T.getID().toString();
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
-
+        String type = instruction.getInstruction();
+        Pair<String, String> transType = new Pair<>(type, transactionID);
         //keep track of number of transactions
         this.transactionSet.add(transactionID);
 
+        //private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
+
+
         //for each key (eg. Wx1, Wx2, Rx2 etc) keep track of the number of accesses
         //String key = instruction.getInstruction() + "x" + instruction.getVariable();
-        if (varInstructionTracker.get(variable) != null) {
+        if (variableTracker.get(variable) != null) {
             // if key already exists, increment the count
-            HashMap<String, Integer> temp = varInstructionTracker.get(variable);
-            String type = instruction.getInstruction();
-
-            if(temp.get(type) != null){
-                temp.put(type, temp.get(type) + 1);
-            } else {
-                temp.put(type, 1);
-            }
-
-            varInstructionTracker.put(variable, temp);
-
-            int count = 0;
-            int read = 0;
-            int write = 0;
-
-            for(HashMap.Entry<String, HashMap<String, Integer>> vars : varInstructionTracker.entrySet()) {
-                for(HashMap.Entry<String, Integer> op : vars.getValue().entrySet()) {
-                    if(op.getKey().equals("R")) {
-                        read = op.getValue();
-                    } else {
-                        write = op.getValue();
+            ArrayList<LinkedList<Pair>> temp = variableTracker.get(variable);
+            Boolean append = false;
+            for(int i = 0; i < temp.size(); i++) {
+                for(Pair pair : temp.get(i)) {
+                    String pairType = pair.getKey().toString();
+                    if((pairType.equals("R") && type.equals("R")) || pair.getValue().toString().equals(transactionID)) {
+                        append = true;
+                        break;
                     }
                 }
-                if((read >= 1 && write == 1) || (write == 2)) {
-                    count++;
+                if(append) {
+                    LinkedList<Pair> tempList = new LinkedList<>();
+                    tempList.add(transType);
+                    temp.add(tempList);
+                    variableTracker.put(variable, temp);
+                    break;
                 }
-                read = 0;
-                write = 0;
+            }
+
+            if(!append) {
+                LinkedList<Pair> tempList = new LinkedList<>();
+                tempList.add(transType);
+                temp.add(tempList);
+                variableTracker.put(variable, temp);
+            }
+
+            int count = 0;
+
+            for(HashMap.Entry<String, ArrayList<LinkedList<Pair>>> vars : variableTracker.entrySet()) {
+                int interim = 0;
+                for(LinkedList<Pair> lists : vars.getValue()) {
+                    if(lists.size() > 0)
+                        interim += lists.size();
+                }
+                if(interim >= 2) count++;
             }
 
             if(count == transactionSet.size()) {
                 System.out.println(transactionID + " aborted due to attempted lock on variable " + variable);
-                abort(T, "cycle");
+                abort(T);
                 return true;
             }
 
         } else {
             // if key doesn't exist, put it in the instruction tracker
-            HashMap<String, Integer> temp = new HashMap<>();
-            temp.put(instruction.getInstruction(), 1);
-            varInstructionTracker.put(variable, temp);
+
+            LinkedList<Pair> tempList = new LinkedList<>();
+            tempList.add(transType);
+            ArrayList<LinkedList<Pair>> tempArray = new ArrayList<>();
+            tempArray.add(tempList);
+            variableTracker.put(variable, tempArray);
         }
         return false;
     }
@@ -385,16 +402,19 @@ public class DM {
         }
     }
 
-    private void abort(Transaction T, String failureType) {
+    private void abort(Transaction T) {
+
         TM.abort(T);
-        transactionSet.remove("T" + T.getID());
+        String transactionID = "T" + T.getID();
+        transactionSet.remove(transactionID);
         HashMap<String, Instruction> variablesLocked = T.getVariablesLockType();
 
         for(HashMap.Entry<String, Instruction> variable : variablesLocked.entrySet()) {
-            String type = variable.getValue().getInstruction();
-            HashMap<String, Integer> temp = varInstructionTracker.get(variable.getKey());
-            temp.put(type, temp.get(type) - 1);
-            varInstructionTracker.put(variable.getKey(), temp);
+            Pair<String, String> removePair = new Pair<>(variable.getValue().getInstruction(), transactionID);
+            ArrayList<LinkedList<Pair>> lists = variableTracker.get(variable.getKey());
+            for(LinkedList<Pair> pairs : lists) {
+                pairs.remove(removePair);
+            }
         }
 
         removeTransLock(T);

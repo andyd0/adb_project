@@ -277,7 +277,7 @@ public class TM {
             if(sites != null) {
                 if(sites.get(id) != null && sites.size() > 0 && sites.get(id) > 0) {
                     entry.getValue().stopTransaction();
-                    System.out.println("Transaction " + entry.getValue().getID() + " aborted because Site " +
+                    System.out.println("T" + entry.getValue().getID() + " ABORTED because Site " +
                                         id.toString() + " has failed");
                 }
             }
