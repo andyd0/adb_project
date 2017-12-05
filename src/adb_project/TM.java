@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 
-
 public class TM {
 
     private ArrayList<Instruction> instructions;
@@ -115,7 +114,10 @@ public class TM {
                     }
 
                     transaction.addCurrentInstruction(instruction);
-                    dm.write(transaction, instruction);
+
+                    if(!dm.deadLockCheck(transaction, instruction))
+                        dm.write(transaction, instruction);
+
                     break;
                 case "R":
                     id = instruction.getId();
@@ -126,7 +128,12 @@ public class TM {
                     }
 
                     transaction.addCurrentInstruction(instruction);
-                    dm.read(transaction, instruction);
+
+                    if(!transaction.isReadOnly() && !dm.deadLockCheck(transaction, instruction))
+                        dm.read(transaction, instruction);
+                    else
+                        dm.read(transaction, instruction);
+
                     break;
                 case "fail":
                     id = instruction.getId();
@@ -156,7 +163,6 @@ public class TM {
                     dm.end(this.getTransaction(id));
                     break;
             }
-            incrementLockTimes();
         }
     }
 
@@ -191,16 +197,15 @@ public class TM {
      * Adds a a transaction to a variable lock queue
      * a transaction object
      * @param variableId - variable id
-     * @param transaction - transaction object
+     * @param T - transaction object
      */
-    public static void addToLockQueue(String variableId, Transaction transaction) {
-        transaction.setLockTime();
+    public static void addToLockQueue(String variableId, Transaction T) {
         if(lockQueue.get(variableId) == null) {
             Queue<Transaction> queue = new LinkedList<>();
-            queue.add(transaction);
+            queue.add(T);
             lockQueue.put(variableId, queue);
         } else {
-            lockQueue.get(variableId).add(transaction);
+            lockQueue.get(variableId).add(T);
         }
     }
 
@@ -261,25 +266,51 @@ public class TM {
      * failure
      * @param id - transaction id
      */
-    public void abort(Integer id) {
+    private void abort(Integer id) {
+        abort(transactionsList.get(id));
         for (HashMap.Entry<Integer, Transaction> entry : this.transactionsList.entrySet())
         {
             HashMap<Integer, Integer> sites = entry.getValue().getOnSites();
             if(sites != null) {
                 if(sites.get(id) != null && sites.size() > 0 && sites.get(id) > 0) {
                     entry.getValue().stopTransaction();
-                    System.out.println("Transaction " + entry.getValue().getID() + " aborted because Site " +
+                    System.out.println("T" + entry.getValue().getID() + " ABORTED because Site " +
                                         id.toString() + " has failed");
                 }
             }
         }
     }
 
+    //private static HashMap<String, Queue<Transaction>> lockQueue;
+    //private static HashMap<Integer, Queue<Transaction>> waitQueue;
     public static void abort(Transaction T) {
 
-    }
+        // Remove from variable lock queue
+        for(HashMap.Entry<String, Queue<Transaction>> locks : lockQueue.entrySet()) {
+            Queue<Transaction> newQueue = new LinkedList<>();
+            Queue<Transaction> oldQueue = locks.getValue();
 
-    private void incrementLockTimes() {
+            while(!oldQueue.isEmpty()) {
+                Transaction queueT = oldQueue.remove();
+                if(queueT != T) {
+                    newQueue.add(queueT);
+                }
+            }
+            lockQueue.put(locks.getKey(), newQueue);
+        }
 
+        // Remove from site wait queue
+        for(HashMap.Entry<Integer, Queue<Transaction>> locks : waitQueue.entrySet()) {
+            Queue<Transaction> newQueue = new LinkedList<>();
+            Queue<Transaction> oldQueue = locks.getValue();
+
+            while(!oldQueue.isEmpty()) {
+                Transaction queueT = oldQueue.remove();
+                if(queueT != T) {
+                    newQueue.add(queueT);
+                }
+            }
+            waitQueue.put(locks.getKey(), newQueue);
+        }
     }
 }

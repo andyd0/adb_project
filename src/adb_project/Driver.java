@@ -19,22 +19,43 @@ import java.util.ArrayList;
 public class Driver {
 
     public static void main(String[] args) throws IOException {
-
-        String path;
+        String path = "";
         String cwd = System.getProperty("user.dir");
 
-        if (args.length == 0) {
-            System.out.println("No test file specified in args, using path\n");
-            path = cwd + "/tests/input_20.txt";
+        Boolean testAll = true;
+
+        if (testAll) {
+          for (int i = 1; i < 22; i++) {
+            if (i < 10) {
+              path = cwd + "/tests/input_" + i + ".txt";
+            } else {
+              path = cwd + "/tests/input_" + i + ".txt";
+            }
+
+            System.out.println("--------------------------");
+            System.out.println("Currently testing: " + path);
+            System.out.println("--------------------------");
+
+            Parser parser = new Parser();
+            ArrayList<Instruction> instructions = parser.getInstructions(path);
+
+            TM tm = new TM(instructions);
+            tm.processInstructions();
+          }
         } else {
-            path = cwd + "/" + args[0];
+          if (args.length == 0) {
+              System.out.println("No test file specified in args, using path\n");
+              path = cwd + "/tests/input_18.txt";
+          } else {
+              path = cwd + "/" + args[0];
+          }
+
+          Parser parser = new Parser();
+          ArrayList<Instruction> instructions = parser.getInstructions(path);
+
+          TM tm = new TM(instructions);
+          tm.processInstructions();
         }
-
-        Parser parser = new Parser();
-        ArrayList<Instruction> instructions = parser.getInstructions(path);
-
-        TM tm = new TM(instructions);
-        tm.processInstructions();
     }
 }
 

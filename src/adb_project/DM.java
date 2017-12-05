@@ -13,18 +13,21 @@ package adb_project;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.Iterator;
+import javafx.util.Pair;
+
 
 public class DM {
 
     private final Integer MAX_SITES = 10;
     private int failedSiteCount;
     private ArrayList<Site> sites;
-    private Set<String> safeTransactionSet = new HashSet<String>();
+    private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
+    private Set<Transaction> transactionSet = new HashSet<>();
 
     /**
      * Creates a Data Manager Object.  Keeps tracks of all sites
@@ -90,8 +93,8 @@ public class DM {
             }
 
             if(not_locked >= failCheck) {
-                for(Site site: sites){
-                    if(!site.getSiteState().equals("failed")) {
+                for (Site site : sites) {
+                    if (!site.getSiteState().equals("failed")) {
                         site.lockVariable(T, variable, instruction);
                     }
                 }
@@ -99,17 +102,8 @@ public class DM {
                 T.addLockedVariable(variable);
                 T.addLockedVariableType(variable, instruction);
 
-                System.out.println(transactionID +" wrote to " + variable + " to all sites " + ": " + value.toString());
+                System.out.println(transactionID + " wrote to " + variable + " to all sites " + ": " + value.toString());
 
-              // This needs to be implemented
-            } else if(deadLockCheck(T, instruction)) {
-                System.out.println("Deadlock exists");
-                // TM.abort(T);
-                // Since the variable is locked or cannot be accessed,
-                // add to lock queue
-
-                // TM.abort(T.getID());
-                // this.safeTransactionSet.remove(T.getID());
             } else {
                 TM.addToLockQueue(variable, T);
             }
@@ -221,15 +215,6 @@ public class DM {
                             TM.addToWaitQueue(site.getId(), T);
                         }
                     }
-                // This needs to be implemented
-                } else if(deadLockCheck(T, instruction)) {
-                    System.out.println("Deadlock exists");
-                    // TM.abort(T);
-                    // Since the variable is locked or cannot be accessed,
-                    // add to lock queue
-
-                    // TM.abort(T.getID());
-                    // this.safeTransactionSet.remove(T.getID());
                 } else {
                     TM.addToLockQueue(variable, T);
                 }
@@ -271,7 +256,9 @@ public class DM {
         sites.get(siteId - 1).setSiteState("failed");
 
         Set<Transaction> lockedTransactions = sites.get(siteId - 1).getLockedTransactions();
-        removeTransLock(lockedTransactions);
+
+        for(Transaction T : lockedTransactions)
+            abort(T);
 
         sites.get(siteId - 1).clearLocktable();
         failedSiteCount++;
@@ -299,71 +286,92 @@ public class DM {
     }
 
 
-    /**
-     * Handles Deadlock check.  Needs to be implemented
-     * @return Boolean
-     */
+    //private HashMap<String, Integer> varInstructionTracker = new HashMap<String, Integer>();
+    //private Set<String> transactionSet = new HashSet<String>();
+
     public Boolean deadLockCheck(Transaction T, Instruction instruction) {
+
         String transactionID = "T" + T.getID().toString();
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
-        Integer siteId;
-        Site site;
+        String type = instruction.getInstruction();
+        Pair<String, String> transType = new Pair<>(type, transactionID);
+        //keep track of number of transactions
+        this.transactionSet.add(T);
 
-        // 1. get the site on which the current variable exists
-        if(index % 2 == 0) {
-            Random randomGenerator = new Random();
-            site = sites.get(randomGenerator.nextInt(9));
+        //private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
 
-            while(!site.getSiteState().equals("running")) {
-                siteId = randomGenerator.nextInt(9);
-                site = sites.get(siteId - 1);
+
+        //for each key (eg. Wx1, Wx2, Rx2 etc) keep track of the number of accesses
+        //String key = instruction.getInstruction() + "x" + instruction.getVariable();
+        if (variableTracker.get(variable) != null) {
+            // if key already exists, increment the count
+            ArrayList<LinkedList<Pair>> temp = variableTracker.get(variable);
+            Boolean append = false;
+            for(int i = 0; i < temp.size(); i++) {
+                for(Pair pair : temp.get(i)) {
+                    String pairType = pair.getKey().toString();
+                    if((pairType.equals("R") && type.equals("R"))) {
+                        append = true;
+                        for(Pair check : temp.get(i)) {
+                            if(check.getKey().equals("W")) {
+                                append = false;
+                                break;
+                            }
+                        }
+                    } else if (pair.getValue().toString().equals(transactionID)) {
+                        append = true;
+                        break;
+                    }
+                }
+                if(append) {
+                    temp.get(i).add(transType);
+                    variableTracker.put(variable, temp);
+                    break;
+                }
             }
+
+            if(!append) {
+                LinkedList<Pair> tempList = new LinkedList<>();
+                tempList.add(transType);
+                temp.add(tempList);
+                variableTracker.put(variable, temp);
+            }
+
+            int count = 0;
+
+            for(HashMap.Entry<String, ArrayList<LinkedList<Pair>>> vars : variableTracker.entrySet()) {
+                int interim = 0;
+                for(LinkedList<Pair> lists : vars.getValue()) {
+                    if(lists.size() > 0)
+                        interim++;
+                }
+                if(interim >= 2) count++;
+            }
+
+            if(count == transactionSet.size()) {
+                Transaction tAbort = T;
+                Integer age = T.getStartTime();
+                for(Transaction t : transactionSet) {
+                    if(t.getStartTime() > age) {
+                        tAbort = t;
+                        age = t.getStartTime();
+                    }
+                }
+                System.out.println("T" + tAbort.getID().toString() + " ABORTED due to attempted lock on variable "
+                                   + variable);
+                abort(tAbort);
+                return true;
+            }
+
         } else {
-            siteId = 1 + index % 10;
-            site = sites.get(siteId - 1);
+            // if key doesn't exist, put it in the instruction tracker
+            LinkedList<Pair> tempList = new LinkedList<>();
+            tempList.add(transType);
+            ArrayList<LinkedList<Pair>> tempArray = new ArrayList<>();
+            tempArray.add(tempList);
+            variableTracker.put(variable, tempArray);
         }
-
-        // 2. using site info: get transaction (Tw) that holds a lock on the current variable
-        Transaction Tw = site.getTransactionThatLockedVariable(variable);
-
-        // no transaction already locking the variable, this is safe so continue
-        if (Tw == null) {
-            return false;
-        }
-
-        // 3. if Tw exists then the current transaction (T from the function args)
-        // will need to wait on Tw
-
-        // Check if Tw already exists in the set, if it does, this will lead to a cycle
-        String existingTransactionId = "T" + Tw.getID().toString();
-        Integer existingTID = Tw.getID();
-        if (this.safeTransactionSet.contains(existingTransactionId)) {
-            // deadlock exists so we remove this transaction from the safe set
-            // and abort it
-            System.out.println("---------- DEADLOCK FOUND ----------");
-            return true;
-        } else {
-            System.out.print("Adding current Transaction: T" + T.getID().toString());
-            System.out.print(" and existing Transaction Tw: T" + Tw.getID().toString());
-            System.out.print(" to the safeset\n");
-            this.safeTransactionSet.add("T" + T.getID().toString());
-            this.safeTransactionSet.add("T" + Tw.getID().toString());
-        }
-
-        /*
-        System.out.println("----------");
-        System.out.println("safeTransactionSet currently has:");
-
-        // Print Transaction IDs already existing in the set
-        Iterator<String> iterator = safeTransactionSet.iterator();
-        while (iterator.hasNext()) {
-            String name = iterator.next();
-            System.out.println(name);
-        }
-
-        System.out.println("----------");
-        */
         return false;
     }
 
@@ -398,13 +406,36 @@ public class DM {
     }
 
     /**
-     * Removes transactions from a lock table if they have been aborted
-     * @param lockedTransactions - set of transaction objects
+     * Removes transactions from a lock table if they have been `ed
+     * @param T - a transaction object
      */
-    public void removeTransLock(Set<Transaction> lockedTransactions) {
+    public void removeTransLock(Transaction T) {
         for(Site site : sites) {
-            for(Transaction T : lockedTransactions)
             site.removeFromLockTable(T);
+        }
+    }
+
+    private void abort(Transaction T) {
+
+        TM.abort(T);
+        String transactionID = "T" + T.getID();
+        transactionSet.remove(transactionID);
+        HashMap<String, Instruction> variablesLocked = T.getVariablesLockType();
+
+        for(HashMap.Entry<String, Instruction> variable : variablesLocked.entrySet()) {
+            Pair<String, String> removePair = new Pair<>(variable.getValue().getInstruction(), transactionID);
+            ArrayList<LinkedList<Pair>> lists = variableTracker.get(variable.getKey());
+            for(LinkedList<Pair> pairs : lists) {
+                pairs.remove(removePair);
+            }
+        }
+
+        removeTransLock(T);
+
+        Queue<String> variables = T.getVariablesLocked();
+
+        while(!variables.isEmpty()) {
+            checkLockQueue(variables.remove());
         }
     }
 
@@ -436,6 +467,7 @@ public class DM {
             }
             checkLockQueue(variable);
         }
+        //this.safeset.remove()
         T.stopTransaction();
     }
 

@@ -16,7 +16,6 @@ public class Transaction {
     private Integer id;
     private Boolean readOnly;
     private Integer startTime;
-    private Integer lockAge;
     private Boolean running;
     private Queue<String> variablesLocked;
     private HashMap<String, Instruction> variablesLockType;
@@ -45,7 +44,6 @@ public class Transaction {
         this.id = id;
         this.readOnly = readOnly;
         this.startTime = startTime;
-        this.lockAge = 0;
         this.running = true;
         this.variablesLocked = new LinkedList<>();
         this.variablesLockType = new HashMap<>();
@@ -159,21 +157,6 @@ public class Transaction {
     }
 
     /**
-     * Increments lock age
-     */
-    public void setLockTime() {
-        lockAge++;
-    }
-
-    /**
-     * Gets lock age of a transaction
-     * @return Integer - lock age
-     */
-    public Integer getLockTime() {
-        return lockAge;
-    }
-
-    /**
      * Returns a HashMap of all the sites the transaction is on
      * @return HashMap - HashMap of sites the transaction is on
      */
@@ -210,6 +193,10 @@ public class Transaction {
      */
     public void decOnSites(int siteId) {
             onSites.put(siteId, onSites.get(siteId) - 1);
+    }
+
+    public HashMap<String, Instruction> getVariablesLockType() {
+        return variablesLockType;
     }
 
     /**

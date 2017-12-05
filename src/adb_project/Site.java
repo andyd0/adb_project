@@ -74,31 +74,6 @@ public class Site {
     }
 
     /**
-     * Check if variable exists on this site by supplying variable object
-     * @param x - Variable object
-     * @return Boolean
-     */
-    public Boolean hasVariable(Variable x) {
-
-        for (HashMap.Entry<String, Variable> entry : this.variables.entrySet())
-        {
-            if(x.getId().equals(entry.getValue().getId())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * check if variable exists on this site by supplying variable id
-     * @param id - variable ID string
-     * @return Boolean
-     */
-    public Boolean hasVariable(String id) {
-        return (variables.get(id) == null);
-    }
-
-    /**
      * HashMap of all variables on this site
      * @return HashMap
      */
@@ -113,15 +88,6 @@ public class Site {
      */
     public Variable getVariable(String id) {
         return variables.get(id);
-    }
-
-    /**
-     * Get variable's value by supplying its id
-     * @param id - variable ID string
-     * @return Integer - variable's value
-     */
-    public Integer getVariableValue(String id) {
-        return variables.get(id).getValue();
     }
 
     /**
