@@ -44,14 +44,6 @@ public class Variable {
     }
 
     /**
-     * Gets the variable ID
-     * @return String - variable ID
-     */
-    public String getId() {
-        return this.id;
-    }
-
-    /**
      * Gets the current value of a variable
      * @return int - current value of variable
      */
@@ -69,7 +61,7 @@ public class Variable {
         Integer value = -1;
 
         for (HashMap.Entry<Integer, Integer> entry : temp.entrySet()) {
-            if (time > entry.getKey()) {
+            if (time >= entry.getKey()) {
                 value = entry.getValue();
             }
         }

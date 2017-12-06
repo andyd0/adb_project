@@ -180,6 +180,14 @@ public class Site {
         for (int i = 1; i <= 20; i++) {
             temp.put("x" + i, new HashMap<>());
         }
+//        // Only adds applicable variables to the site
+//        for (int i = 1; i <= 20; i++) {
+//            if (i % 2 == 0) {
+//                temp.put("x" + i, new HashMap<>());
+//            } else if ((1 + i % 10) == id) {
+//                temp.put("x" + i, new HashMap<>());
+//            }
+//        }
         return temp;
     }
 
@@ -198,7 +206,7 @@ public class Site {
     }
 
     /**
-     * Removes a transaction from a lock the site's lock table
+     * Removes a transaction from the site's lock table
      * @param T - transaction object
      */
     public void removeFromLockTable(Transaction T) {
@@ -244,20 +252,5 @@ public class Site {
         String result = "";
         result += "Site: " + id;
         return result;
-    }
-
-    /**
-     * Gets the transaction which already locked the variable that a new transaction
-     * tried to access (used in deadLockCheck() by the DM)
-     * @return Transaction - existing transaction locking a variable
-    */
-    public Transaction getTransactionThatLockedVariable(String varId) {
-        HashMap<Transaction, Instruction> map = this.lockTable.get(varId);
-        Transaction t = null;
-        for (HashMap.Entry<Transaction, Instruction> entry : map.entrySet()) {
-            t = entry.getKey();
-        }
-
-        return t;
     }
 }

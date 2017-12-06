@@ -77,9 +77,20 @@ public class DM {
         String variable = "x" + index.toString();
         Integer value = instruction.getValue();
 
+
         // Getting a count of failed sites for later checking against what is
         // not locked
         if(index % 2 == 0) {
+
+            if(T.getLockedVariableInfo(variable) != null
+                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
+                for (Site site : sites) {
+                    if (!site.getSiteState().equals("failed")) {
+                        site.removeFromLockTable(T);
+                        T.removeLockedVariable(variable);
+                    }
+                }
+            }
 
             Integer failCheck = MAX_SITES - getFailCount();
 
@@ -112,6 +123,14 @@ public class DM {
 
             Integer siteId = 1 + index % 10;
             Site site = sites.get(siteId - 1);
+
+            if(T.getLockedVariableInfo(variable) != null
+                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
+                    if (!site.getSiteState().equals("failed")) {
+                        site.removeFromLockTable(T);
+                        T.removeLockedVariable(variable);
+                    }
+            }
 
             if(!site.getSiteState().equals("failed")) {
                 if(site.isVariableWriteLocked(variable)) {
@@ -283,6 +302,19 @@ public class DM {
         sites.get(siteId - 1).setSiteState("recovered");
         sites.get(siteId - 1).recover();
         failedSiteCount--;
+
+        while(TM.checkWaitQueue(siteId)) {
+            Queue<Transaction> transactions = TM.getWaitQueue(siteId);
+            while(!transactions.isEmpty()) {
+                Transaction T = transactions.remove();
+                Instruction tTnstruction = T.getCurrentInstruction();
+                if(tTnstruction.getInstruction().equals("R")) {
+                    read(T, tTnstruction);
+                } else {
+                    write(T, tTnstruction);
+                }
+            }
+        }
     }
 
 
@@ -415,11 +447,9 @@ public class DM {
         }
     }
 
-    private void abort(Transaction T) {
+    public void removeFromVariableTracker(Transaction T) {
 
-        TM.abort(T);
         String transactionID = "T" + T.getID();
-        transactionSet.remove(transactionID);
         HashMap<String, Instruction> variablesLocked = T.getVariablesLockType();
 
         for(HashMap.Entry<String, Instruction> variable : variablesLocked.entrySet()) {
@@ -429,7 +459,14 @@ public class DM {
                 pairs.remove(removePair);
             }
         }
+    }
 
+    private void abort(Transaction T) {
+
+        TM.abort(T);
+        transactionSet.remove(T);
+
+        removeFromVariableTracker(T);
         removeTransLock(T);
 
         Queue<String> variables = T.getVariablesLocked();
@@ -447,6 +484,7 @@ public class DM {
      */
     public void end(Transaction T) {
 
+        removeFromVariableTracker(T);
         Queue<String> variables = T.getVariablesLocked();
 
         while(!variables.isEmpty()) {
@@ -467,7 +505,6 @@ public class DM {
             }
             checkLockQueue(variable);
         }
-        //this.safeset.remove()
         T.stopTransaction();
     }
 

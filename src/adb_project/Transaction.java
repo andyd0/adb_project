@@ -120,6 +120,22 @@ public class Transaction {
      * Removes a variable from lock variable type HashMap
      * @param variable - variable id
      */
+    public void removeLockedVariable(String variable) {
+        removeLockedVariableType(variable);
+        Queue<String> temp = new LinkedList<>();
+        while(!variablesLocked.isEmpty()) {
+            if(!variablesLocked.peek().equals(variable)) {
+                temp.add(variablesLocked.remove());
+            } else {
+                variablesLocked.remove();
+            }
+        }
+    }
+
+    /**
+     * Removes a variable from lock variable type HashMap
+     * @param variable - variable id
+     */
     public void removeLockedVariableType(String variable) {
         variablesLockType.remove(variable);
     }

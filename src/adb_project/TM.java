@@ -180,6 +180,23 @@ public class TM {
     }
 
     /**
+     * Gets a transaction from the wait queue if there is one waiting
+     * @param siteId - site ID
+     * @return Transaction - a transaction object
+     */
+    public static Queue<Transaction> getWaitQueue(Integer siteId) {
+            return waitQueue.get(siteId);
+    }
+
+    public static Boolean checkWaitQueue(Integer siteId) {
+        if(waitQueue.get(siteId) == null || waitQueue.get(siteId).size() == 0) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
      * Removes a transaction from a variable lock queue and returns
      * a transaction object
      * @param variableId - variable id
@@ -236,19 +253,6 @@ public class TM {
             waitQueue.put(siteId, queue);
         } else {
             waitQueue.get(siteId).add(transaction);
-        }
-    }
-
-    /**
-     * Gets a transaction from the wait queue if there is one waiting
-     * @param siteId - site ID
-     * @return Transaction - a transaction object
-     */
-    public static Transaction getFromWaitQueue(Integer siteId) {
-        if(waitQueue.get(siteId).size() == 0) {
-            return null;
-        } else {
-            return waitQueue.get(siteId).remove();
         }
     }
 
