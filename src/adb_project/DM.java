@@ -19,7 +19,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.HashSet;
 import javafx.util.Pair;
-
+import java.util.Stack;
 
 public class DM {
 
@@ -28,6 +28,10 @@ public class DM {
     private ArrayList<Site> sites;
     private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
     private Set<Transaction> transactionSet = new HashSet<>();
+    private ArrayList<ArrayList<Integer>> matrix = new ArrayList<ArrayList<Integer>>();
+    private int[][] adjacency;
+    //private Stack<Integer> stack;
+    //int adjacencyMatrix[][];
 
     /**
      * Creates a Data Manager Object.  Keeps tracks of all sites
@@ -317,6 +321,73 @@ public class DM {
         }
     }
 
+    public void createMatrix(Transaction T, Instruction instruction) {
+        //System.out.println("this.matrix.size(): " + this.matrix.size());
+        //System.out.println("this.transactionSet.size(): " + this.transactionSet.size());
+        if (this.matrix.size() < this.transactionSet.size()) {
+            for (int i=0; i<this.matrix.size(); i++ ) {
+                Integer tmpSize = this.matrix.get(i).size();
+                for (int j=tmpSize; j<this.transactionSet.size(); j++) {
+                    this.matrix.get(i).add(0);
+                }
+            }
+            for (int i=this.matrix.size(); i < this.transactionSet.size(); i++) {
+                this.matrix.add(i, new ArrayList<Integer>(this.transactionSet.size()));
+                for (int j=0; j<this.transactionSet.size(); j++) {
+                    this.matrix.get(i).add(0);
+                }
+            }
+        }
+
+        String transactionID = "T" + T.getID().toString();
+        Integer index = instruction.getVariable();
+        String variable = "x" + index.toString();
+        String type = instruction.getInstruction();
+        Site site;
+
+        if (index%2 == 0) {
+            Random randomGenerator = new Random();
+            Integer siteId;
+            site = sites.get(randomGenerator.nextInt(9));
+
+            while(!site.getSiteState().equals("running")) {
+                siteId = randomGenerator.nextInt(9);
+                site = sites.get(siteId - 1);
+            }
+        } else {
+            Integer siteId = 1 + index % 10;
+            site = sites.get(siteId - 1);
+        }
+
+        Transaction existingTransaction = site.getTransactionThatLockedVariable(variable);
+
+        if (existingTransaction != null) {
+            //System.out.println("T.getID()-1:" + (T.getID()-1));
+            //System.out.println("existingTransaction.getID()-1:" + (existingTransaction.getID()-1));
+            //System.out.println("this.matrix.size():" + this.matrix.size());
+            if (this.matrix.size() > (T.getID()-1)) {
+                if (this.matrix.get(T.getID()-1).size() >(existingTransaction.getID()-1)) {
+                    this.matrix.get(T.getID()-1).set(existingTransaction.getID()-1, 1);
+                }
+            }
+        }
+        /*
+        System.out.println("Adjacency matrix looks like:");
+        for (int i=0; i<this.matrix.size(); i++) {
+            System.out.println(this.matrix.get(i).toString());
+            System.out.println();
+        }*/
+
+        this.adjacency = new int[this.matrix.size()][this.transactionSet.size()];
+        for (int i=0; i<this.matrix.size(); i++) {
+            for (int j=0; j<this.transactionSet.size(); j++) {
+                adjacency[i][j] = this.matrix.get(i).get(j);
+            }
+        }
+
+        if (adjacency[0].length > 1)
+            dfs(adjacency, 1);
+    }
 
     //private HashMap<String, Integer> varInstructionTracker = new HashMap<String, Integer>();
     //private Set<String> transactionSet = new HashSet<String>();
@@ -330,9 +401,8 @@ public class DM {
         Pair<String, String> transType = new Pair<>(type, transactionID);
         //keep track of number of transactions
         this.transactionSet.add(T);
-
+        createMatrix(T, instruction);
         //private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
-
 
         //for each key (eg. Wx1, Wx2, Rx2 etc) keep track of the number of accesses
         //String key = instruction.getInstruction() + "x" + instruction.getVariable();
@@ -564,5 +634,72 @@ public class DM {
             System.out.println("All otther variables have their initial values");
         }
         System.out.println("");
+    }
+
+    public void dfs(int adjacency_matrix2[][], int source) {
+        Stack<Integer> stack = new Stack<Integer>();
+        int adjacencyMatrix[][];
+        int adjacency_matrix[][] = new int[adjacency_matrix2[0].length+1][adjacency_matrix2[0].length+1];
+
+        //System.out.println("Adjacency matrix looks like:");
+        for (int i=0; i<adjacency_matrix2[0].length + 1; i++) {
+            for (int j=0; j<adjacency_matrix2[0].length + 1; j++) {
+                if (i == 0) {
+                    adjacency_matrix[i][j] = 0;
+                } else if (j == 0) {
+                    adjacency_matrix[i][j] = 0;  
+                } else {
+                    adjacency_matrix[i][j] = adjacency_matrix2[i-1][j-1];
+                }
+            }
+        }
+
+        System.out.println("Adjacency matrix looks like:");
+        for (int i=0; i<adjacency_matrix[0].length; i++) {
+            for (int j=0; j<adjacency_matrix[0].length; j++) {
+                System.out.print(adjacency_matrix[i][j] + " ");
+            }
+            System.out.println();
+        }
+
+        int number_of_nodes = adjacency_matrix[source].length - 1;
+
+        adjacencyMatrix = new int[number_of_nodes + 1][number_of_nodes + 1];
+        for (int sourcevertex = 1; sourcevertex <= number_of_nodes; sourcevertex++) {
+            for (int destinationvertex = 1; destinationvertex <= number_of_nodes; destinationvertex++) {
+                adjacencyMatrix[sourcevertex][destinationvertex] =
+                    adjacency_matrix[sourcevertex][destinationvertex];
+            }
+        }
+ 
+        int visited[] = new int[number_of_nodes + 1];   
+        int element = source;   
+        int destination = source;     
+        visited[source] = 1;    
+        stack.push(source);
+ 
+        while (!stack.isEmpty()) {
+            element = stack.peek();
+            destination = element;  
+            while (destination <= number_of_nodes) {
+                if (adjacencyMatrix[element][destination] == 1 && visited[destination] == 1) {
+                    if (stack.contains(destination)) {
+                        System.out.println("------ GRAPH CONTAINS CYCLE ------");
+                        return; 
+                    }
+                }
+ 
+                if (adjacencyMatrix[element][destination] == 1 && visited[destination] == 0) {
+                    stack.push(destination);
+                    visited[destination] = 1;
+                    adjacencyMatrix[element][destination] = 0;
+                    element = destination;
+                    destination = 1;
+                    continue;
+                }
+                destination++;
+            }
+            stack.pop();  
+        } 
     }
 }
