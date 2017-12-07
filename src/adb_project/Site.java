@@ -211,9 +211,11 @@ public class Site {
      */
     public void removeFromLockTable(Transaction T) {
         for (HashMap.Entry<String, HashMap<Transaction, Instruction>> entry : this.lockTable.entrySet()) {
-            for (HashMap.Entry<Transaction, Instruction> tEntry : entry.getValue().entrySet()) {
-                if(T.getID().equals(tEntry.getKey().getID())) {
-                    entry.getValue().remove(T);
+            for (Iterator<HashMap.Entry<Transaction, Instruction>> it =
+                 entry.getValue().entrySet().iterator(); it.hasNext();) {
+                Transaction t = it.next().getKey();
+                if (T.getID().equals(t.getID())) {
+                    it.remove();
                 }
             }
         }
