@@ -122,14 +122,22 @@ public class Site {
      * @param varId - variable ID
      * @param time - time when variable is updated
      */
-    public void handleLockTable(Transaction t, String varId, Integer time) {
+    public Integer handleLockTable(Transaction t, String varId, Integer time) {
         Instruction instruction = lockTable.get(varId).get(t);
+        Boolean updated = false;
         if(instruction.getInstruction().equals("W")) {
             updateVariable(varId, instruction.getValue(), time);
+            updated = true;
         }
         lockTable.get(varId).remove(t);
         t.removeLockedVariableType(varId);
         t.decOnSites(this.id);
+
+        if(updated) {
+            return instruction.getValue();
+        } else {
+            return null;
+        }
     }
 
     /**

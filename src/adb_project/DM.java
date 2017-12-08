@@ -26,7 +26,6 @@ public class DM {
     private final Integer MAX_SITES = 10;
     private int failedSiteCount;
     private ArrayList<Site> sites;
-    private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
     private Set<Transaction> transactionSet = new HashSet<>();
     private ArrayList<ArrayList<Integer>> matrix = new ArrayList<ArrayList<Integer>>();
     private int[][] adjacency;
@@ -117,8 +116,6 @@ public class DM {
                 T.addLockedVariable(variable);
                 T.addLockedVariableType(variable, instruction);
 
-                System.out.println(transactionID + " wrote to " + variable + " to all sites " + ": " + value.toString());
-
             } else {
                 TM.addToLockQueue(variable, T);
             }
@@ -144,9 +141,6 @@ public class DM {
 
                     T.addLockedVariable(variable);
                     T.addLockedVariableType(variable, instruction);
-
-                    System.out.println(transactionID +" wrote to " + variable + " at Site " +
-                            sites.get(0).getId() + ": " + value.toString());
                 }
             } else if(site.getSiteState().equals("failed")) {
                 TM.addToWaitQueue(siteId, T);
@@ -321,7 +315,10 @@ public class DM {
         }
     }
 
-    public Boolean checkAdjacencyMatrix(Transaction T, Instruction instruction) {
+    public Boolean deadLockCheck(Transaction T, Instruction instruction) {
+
+        transactionSet.add(T);
+
         if (this.matrix.size() < this.transactionSet.size()) {
             for (int i=0; i<this.matrix.size(); i++ ) {
                 Integer tmpSize = this.matrix.get(i).size();
@@ -337,7 +334,6 @@ public class DM {
             }
         }
 
-        String transactionID = "T" + T.getID().toString();
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
         String type = instruction.getInstruction();
@@ -383,96 +379,22 @@ public class DM {
             cycleExists = checkGraph(adjacency, 1);
         }
 
+        if(cycleExists) {
+            Transaction tAbort = T;
+            Integer age = T.getStartTime();
+            for(Transaction t : transactionSet) {
+                if(t.getStartTime() > age) {
+                    tAbort = t;
+                    age = t.getStartTime();
+                }
+            }
+            System.out.println("T" + tAbort.getID().toString() + " ABORTED due to attempted lock on variable "
+                    + variable);
+            abort(tAbort);
+            return true;
+        }
+
         return cycleExists;
-    }
-
-    public Boolean deadLockCheck(Transaction T, Instruction instruction) {
-
-        String transactionID = "T" + T.getID().toString();
-        Integer index = instruction.getVariable();
-        String variable = "x" + index.toString();
-        String type = instruction.getInstruction();
-        Pair<String, String> transType = new Pair<>(type, transactionID);
-        //keep track of number of transactions
-        this.transactionSet.add(T);
-        Boolean cycleExists = checkAdjacencyMatrix(T, instruction);
-        if (cycleExists) {
-            System.out.println("------ CYCLE EXISTS ------");
-        }
-
-        //private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
-
-        //for each key (eg. Wx1, Wx2, Rx2 etc) keep track of the number of accesses
-        //String key = instruction.getInstruction() + "x" + instruction.getVariable();
-        if (variableTracker.get(variable) != null) {
-            // if key already exists, increment the count
-            ArrayList<LinkedList<Pair>> temp = variableTracker.get(variable);
-            Boolean append = false;
-            for(int i = 0; i < temp.size(); i++) {
-                for(Pair pair : temp.get(i)) {
-                    String pairType = pair.getKey().toString();
-                    if((pairType.equals("R") && type.equals("R"))) {
-                        append = true;
-                        for(Pair check : temp.get(i)) {
-                            if(check.getKey().equals("W")) {
-                                append = false;
-                                break;
-                            }
-                        }
-                    } else if (pair.getValue().toString().equals(transactionID)) {
-                        append = true;
-                        break;
-                    }
-                }
-                if(append) {
-                    temp.get(i).add(transType);
-                    variableTracker.put(variable, temp);
-                    break;
-                }
-            }
-
-            if(!append) {
-                LinkedList<Pair> tempList = new LinkedList<>();
-                tempList.add(transType);
-                temp.add(tempList);
-                variableTracker.put(variable, temp);
-            }
-
-            int count = 0;
-
-            for(HashMap.Entry<String, ArrayList<LinkedList<Pair>>> vars : variableTracker.entrySet()) {
-                int interim = 0;
-                for(LinkedList<Pair> lists : vars.getValue()) {
-                    if(lists.size() > 0)
-                        interim++;
-                }
-                if(interim >= 2) count++;
-            }
-
-            if(count == transactionSet.size()) {
-                Transaction tAbort = T;
-                Integer age = T.getStartTime();
-                for(Transaction t : transactionSet) {
-                    if(t.getStartTime() > age) {
-                        tAbort = t;
-                        age = t.getStartTime();
-                    }
-                }
-                System.out.println("T" + tAbort.getID().toString() + " ABORTED due to attempted lock on variable "
-                                   + variable);
-                abort(tAbort);
-                return true;
-            }
-
-        } else {
-            // if key doesn't exist, put it in the instruction tracker
-            LinkedList<Pair> tempList = new LinkedList<>();
-            tempList.add(transType);
-            ArrayList<LinkedList<Pair>> tempArray = new ArrayList<>();
-            tempArray.add(tempList);
-            variableTracker.put(variable, tempArray);
-        }
-        return false;
     }
 
     /**
@@ -509,32 +431,16 @@ public class DM {
      * Removes transactions from a lock table if they have been `ed
      * @param T - a transaction object
      */
-    public void removeTransLock(Transaction T) {
+    private void removeTransLock(Transaction T) {
         for(Site site : sites) {
             site.removeFromLockTable(T);
-        }
-    }
-
-    public void removeFromVariableTracker(Transaction T) {
-
-        String transactionID = "T" + T.getID();
-        HashMap<String, Instruction> variablesLocked = T.getVariablesLockType();
-
-        for(HashMap.Entry<String, Instruction> variable : variablesLocked.entrySet()) {
-            Pair<String, String> removePair = new Pair<>(variable.getValue().getInstruction(), transactionID);
-            ArrayList<LinkedList<Pair>> lists = variableTracker.get(variable.getKey());
-            for(LinkedList<Pair> pairs : lists) {
-                pairs.remove(removePair);
-            }
         }
     }
 
     private void abort(Transaction T) {
 
         TM.abort(T);
-        transactionSet.remove(T);
 
-        removeFromVariableTracker(T);
         removeTransLock(T);
 
         Queue<String> variables = T.getVariablesLocked();
@@ -552,24 +458,32 @@ public class DM {
      */
     public void end(Transaction T) {
 
-        removeFromVariableTracker(T);
         Queue<String> variables = T.getVariablesLocked();
 
         while(!variables.isEmpty()) {
             String variable = variables.remove();
             Integer index = Integer.parseInt(variable.replaceAll("\\D+",""));
 
+            Integer value = null;
+
             if(index % 2 == 0) {
                 for(Site site: sites) {
                     if(!site.getSiteState().equals("failed") && (T.getOnSites().get(site.getId()) != 0)
                        && site.isVariableLocked(variable)) {
-                        site.handleLockTable(T, variable, TM.getTime());
+                        value = site.handleLockTable(T, variable, TM.getTime());
                     }
                 }
+                if(value != null)
+                    System.out.println("T" + T.getID().toString() + " committed " + variable +
+                                       " to all available sites " + ": " + value.toString());
+
             } else {
                 Integer site_no = 1 + index % 10;
                 Site site = sites.get(site_no - 1);
-                site.handleLockTable(T, variable, TM.getTime());
+                value = site.handleLockTable(T, variable, TM.getTime());
+                if(value != null)
+                    System.out.println("T" + T.getID().toString() +" committed " + variable + " to Site " +
+                                       sites.get(0).getId() + ": " + value.toString());
             }
             checkLockQueue(variable);
         }
@@ -591,7 +505,7 @@ public class DM {
                 }
             }
             if(commitCount != site.getVariableCount()) {
-                System.out.println("All otther variables have their initial values");
+                System.out.println("All other variables have their initial values");
             }
             System.out.println("");
         }
@@ -629,13 +543,13 @@ public class DM {
             }
         }
         if(commitCount != site.getVariableCount()) {
-            System.out.println("All otther variables have their initial values");
+            System.out.println("All other variables have their initial values");
         }
         System.out.println("");
     }
 
-    public Boolean checkGraph(int adjacency_matrix2[][], int source) {
-        Stack<Integer> stack = new Stack<Integer>();
+    private Boolean checkGraph(int adjacency_matrix2[][], int source) {
+        Stack<Integer> stack = new Stack<>();
         int adjacencyMatrix[][];
         int adjacency_matrix[][] = new int[adjacency_matrix2[0].length+1][adjacency_matrix2[0].length+1];
 
