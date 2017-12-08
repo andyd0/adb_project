@@ -104,6 +104,10 @@ public class Site {
         }
     }
 
+    public int getLockCount(String id) {
+        return lockTable.get(id).size();
+    }
+
     /**
      * Adds a transaction to a variable's lock table HashMap
      * @param t - transaction object

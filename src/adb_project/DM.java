@@ -13,12 +13,10 @@ package adb_project;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.HashSet;
-import javafx.util.Pair;
 import java.util.Stack;
 
 public class DM {
@@ -27,7 +25,7 @@ public class DM {
     private int failedSiteCount;
     private ArrayList<Site> sites;
     private Set<Transaction> transactionSet = new HashSet<>();
-    private ArrayList<ArrayList<Integer>> matrix = new ArrayList<ArrayList<Integer>>();
+    private ArrayList<ArrayList<Integer>> matrix = new ArrayList<>();
     private int[][] adjacency;
     //private Stack<Integer> stack;
     //int adjacencyMatrix[][];
@@ -74,11 +72,8 @@ public class DM {
      */
     public void write(Transaction T, Instruction instruction) {
 
-        String transactionID = "T" + T.getID().toString();
-
         Integer index = instruction.getVariable();
         String variable = "x" + index.toString();
-        Integer value = instruction.getValue();
 
 
         // Getting a count of failed sites for later checking against what is
@@ -86,9 +81,9 @@ public class DM {
         if(index % 2 == 0) {
 
             if(T.getLockedVariableInfo(variable) != null
-                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
+               && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
                 for (Site site : sites) {
-                    if (!site.getSiteState().equals("failed")) {
+                    if (!site.getSiteState().equals("failed") && site.getLockCount(variable) == 1) {
                         site.removeFromLockTable(T);
                         T.removeLockedVariable(variable);
                     }
@@ -126,7 +121,8 @@ public class DM {
             Site site = sites.get(siteId - 1);
 
             if(T.getLockedVariableInfo(variable) != null
-                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
+               && T.getLockedVariableInfo(variable).getInstruction().equals("R")
+               && site.getLockCount(variable) == 1) {
                     if (!site.getSiteState().equals("failed")) {
                         site.removeFromLockTable(T);
                         T.removeLockedVariable(variable);

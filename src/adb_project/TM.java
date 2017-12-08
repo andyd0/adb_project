@@ -115,7 +115,7 @@ public class TM {
 
                     transaction.addCurrentInstruction(instruction);
 
-                    if(!dm.deadLockCheck(transaction, instruction))
+                    if(!dm.deadLockCheck(transaction, instruction) || transaction.isRunning())
                         dm.write(transaction, instruction);
 
                     break;
@@ -271,7 +271,6 @@ public class TM {
      * @param id - transaction id
      */
     private void abort(Integer id) {
-        abort(transactionsList.get(id));
         for (HashMap.Entry<Integer, Transaction> entry : this.transactionsList.entrySet())
         {
             HashMap<Integer, Integer> sites = entry.getValue().getOnSites();
@@ -316,5 +315,6 @@ public class TM {
             }
             waitQueue.put(locks.getKey(), newQueue);
         }
+        T.stopTransaction();
     }
 }
