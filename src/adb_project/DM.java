@@ -130,7 +130,7 @@ public class DM {
             }
 
             if(!site.getSiteState().equals("failed")) {
-                if(site.isVariableWriteLocked(variable)) {
+                if(site.isVariableLocked(variable)) {
                     TM.addToLockQueue(variable, T);
                 } else {
                     site.lockVariable(T, variable, instruction);

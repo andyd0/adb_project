@@ -234,16 +234,12 @@ T1 committed x2 to all available sites : 10
 --------------------------
 Currently testing: D:\Documents\OneDrive\Programming\adb_project/tests/input_34.txt
 --------------------------
-T3 read x3: 30
-T4 read x4: 40
-T5 read x5: 50
 T1 read x1: 10
 T2 read x2: 20
-T5 ABORTED due to attempted lock on variable x1
-T4 committed x5 to Site 1: 40
-T3 committed x4 to all available sites : 30
-T2 committed x3 to Site 1: 20
-T1 committed x2 to all available sites : 10
+T3 read x3: 30
+T4 read x4: 40
+T4 ABORTED due to attempted lock on variable x2
+T3 committed x4 to all available sites : 3
 --------------------------
 Currently testing: D:\Documents\OneDrive\Programming\adb_project/tests/input_35.txt
 --------------------------
@@ -257,3 +253,15 @@ T4 committed x5 to Site 1: 40
 T3 committed x4 to all available sites : 30
 T2 committed x3 to Site 1: 20
 T1 committed x2 to all available sites : 10
+--------------------------
+Currently testing: D:\Documents\OneDrive\Programming\adb_project/tests/input_36.txt
+--------------------------
+T1 read x1: 10
+T2 read x1: 10
+--------------------------
+Currently testing: D:\Documents\OneDrive\Programming\adb_project/tests/input_37.txt
+--------------------------
+T2 read x2: 20
+T2 read x1: 10
+T1 committed x1 to Site 1: 101
+T1 committed x2 to all available sites : 102
