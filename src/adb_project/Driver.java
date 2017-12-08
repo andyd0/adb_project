@@ -45,7 +45,7 @@ public class Driver {
         } else {
           if (args.length == 0) {
               System.out.println("No test file specified in args, using path\n");
-              path = cwd + "/tests/input_4.txt";
+              path = cwd + "/tests/input_15.txt";
           } else {
               path = cwd + "/" + args[0];
           }

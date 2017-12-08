@@ -190,7 +190,7 @@ public class DM {
 
                 while(!site.getSiteState().equals("running")) {
                     siteId = randomGenerator.nextInt(9);
-                    site = sites.get(siteId - 1);
+                    site = sites.get(siteId);
                 }
 
                 value = site.getVariable(variable).getPreviousValue(T.getStartTime());
@@ -342,7 +342,7 @@ public class DM {
 
             while(!site.getSiteState().equals("running")) {
                 siteId = randomGenerator.nextInt(9);
-                site = sites.get(siteId - 1);
+                site = sites.get(siteId);
             }
         } else {
             Integer siteId = 1 + index % 10;
