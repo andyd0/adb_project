@@ -51,7 +51,7 @@ public class Driver {
               System.out.println("--------------------------");
               path = cwd + "/tests/input_" + inputno + ".txt";
           } else {
-              path = cwd + "/" + args[0];
+              path = cwd + "/tests/" + args[0];
           }
 
           Parser parser = new Parser();
