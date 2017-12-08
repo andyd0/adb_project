@@ -321,9 +321,7 @@ public class DM {
         }
     }
 
-    public void createMatrix(Transaction T, Instruction instruction) {
-        //System.out.println("this.matrix.size(): " + this.matrix.size());
-        //System.out.println("this.transactionSet.size(): " + this.transactionSet.size());
+    public Boolean checkAdjacencyMatrix(Transaction T, Instruction instruction) {
         if (this.matrix.size() < this.transactionSet.size()) {
             for (int i=0; i<this.matrix.size(); i++ ) {
                 Integer tmpSize = this.matrix.get(i).size();
@@ -360,23 +358,17 @@ public class DM {
         }
 
         Transaction existingTransaction = site.getTransactionThatLockedVariable(variable);
+        Instruction existingInstruction = site.getInstructionThatLockedVariable(variable);
 
-        if (existingTransaction != null) {
-            //System.out.println("T.getID()-1:" + (T.getID()-1));
-            //System.out.println("existingTransaction.getID()-1:" + (existingTransaction.getID()-1));
-            //System.out.println("this.matrix.size():" + this.matrix.size());
-            if (this.matrix.size() > (T.getID()-1)) {
-                if (this.matrix.get(T.getID()-1).size() >(existingTransaction.getID()-1)) {
-                    this.matrix.get(T.getID()-1).set(existingTransaction.getID()-1, 1);
+        if (existingInstruction != null) {
+            if (!(type.equals("R") && type.equals(existingInstruction.getInstruction()))) {
+                if (this.matrix.size() > (T.getID()-1)) {
+                    if (this.matrix.get(T.getID()-1).size() >(existingTransaction.getID()-1)) {
+                        this.matrix.get(T.getID()-1).set(existingTransaction.getID()-1, 1);
+                    }
                 }
             }
         }
-        /*
-        System.out.println("Adjacency matrix looks like:");
-        for (int i=0; i<this.matrix.size(); i++) {
-            System.out.println(this.matrix.get(i).toString());
-            System.out.println();
-        }*/
 
         this.adjacency = new int[this.matrix.size()][this.transactionSet.size()];
         for (int i=0; i<this.matrix.size(); i++) {
@@ -385,12 +377,14 @@ public class DM {
             }
         }
 
-        if (adjacency[0].length > 1)
-            dfs(adjacency, 1);
-    }
+        Boolean cycleExists = false;
 
-    //private HashMap<String, Integer> varInstructionTracker = new HashMap<String, Integer>();
-    //private Set<String> transactionSet = new HashSet<String>();
+        if (adjacency[0].length > 1) {
+            cycleExists = checkGraph(adjacency, 1);
+        }
+
+        return cycleExists;
+    }
 
     public Boolean deadLockCheck(Transaction T, Instruction instruction) {
 
@@ -401,7 +395,11 @@ public class DM {
         Pair<String, String> transType = new Pair<>(type, transactionID);
         //keep track of number of transactions
         this.transactionSet.add(T);
-        createMatrix(T, instruction);
+        Boolean cycleExists = checkAdjacencyMatrix(T, instruction);
+        if (cycleExists) {
+            System.out.println("------ CYCLE EXISTS ------");
+        }
+
         //private HashMap<String, ArrayList<LinkedList<Pair>>> variableTracker = new HashMap<>();
 
         //for each key (eg. Wx1, Wx2, Rx2 etc) keep track of the number of accesses
@@ -636,12 +634,11 @@ public class DM {
         System.out.println("");
     }
 
-    public void dfs(int adjacency_matrix2[][], int source) {
+    public Boolean checkGraph(int adjacency_matrix2[][], int source) {
         Stack<Integer> stack = new Stack<Integer>();
         int adjacencyMatrix[][];
         int adjacency_matrix[][] = new int[adjacency_matrix2[0].length+1][adjacency_matrix2[0].length+1];
 
-        //System.out.println("Adjacency matrix looks like:");
         for (int i=0; i<adjacency_matrix2[0].length + 1; i++) {
             for (int j=0; j<adjacency_matrix2[0].length + 1; j++) {
                 if (i == 0) {
@@ -652,14 +649,6 @@ public class DM {
                     adjacency_matrix[i][j] = adjacency_matrix2[i-1][j-1];
                 }
             }
-        }
-
-        System.out.println("Adjacency matrix looks like:");
-        for (int i=0; i<adjacency_matrix[0].length; i++) {
-            for (int j=0; j<adjacency_matrix[0].length; j++) {
-                System.out.print(adjacency_matrix[i][j] + " ");
-            }
-            System.out.println();
         }
 
         int number_of_nodes = adjacency_matrix[source].length - 1;
@@ -684,8 +673,8 @@ public class DM {
             while (destination <= number_of_nodes) {
                 if (adjacencyMatrix[element][destination] == 1 && visited[destination] == 1) {
                     if (stack.contains(destination)) {
-                        System.out.println("------ GRAPH CONTAINS CYCLE ------");
-                        return; 
+                        //System.out.println("------ GRAPH CONTAINS CYCLE ------");
+                        return true;
                     }
                 }
  
@@ -700,6 +689,7 @@ public class DM {
                 destination++;
             }
             stack.pop();  
-        } 
+        }
+        return false;
     }
 }

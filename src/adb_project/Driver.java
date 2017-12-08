@@ -25,7 +25,7 @@ public class Driver {
         Boolean testAll = true;
 
         if (testAll) {
-          for (int i = 1; i < 32; i++) {
+          for (int i = 1; i < 36; i++) {
             if (i < 10) {
               path = cwd + "/tests/input_" + i + ".txt";
             } else {
@@ -45,7 +45,7 @@ public class Driver {
         } else {
           if (args.length == 0) {
               System.out.println("No test file specified in args, using path\n");
-              path = cwd + "/tests/input_30.txt";
+              path = cwd + "/tests/input_23.txt";
           } else {
               path = cwd + "/" + args[0];
           }

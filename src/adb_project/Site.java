@@ -258,6 +258,18 @@ public class Site {
         return t;
     }
 
+    public Instruction getInstructionThatLockedVariable(String varId) {
+        HashMap < Transaction, Instruction > map = this.lockTable.get(varId);
+        Instruction i = null;
+        if (map == null) {
+            return null;
+        }
+        for (HashMap.Entry < Transaction, Instruction > entry: map.entrySet()) {
+            i = entry.getValue();
+        }
+        return i;
+    }
+
     /**
      * toString method for a site object
      * @return String - details of a Site
