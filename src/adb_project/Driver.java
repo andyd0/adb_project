@@ -21,8 +21,8 @@ public class Driver {
     public static void main(String[] args) throws IOException {
         String path = "";
         String cwd = System.getProperty("user.dir");
-        int inputno = 39;
 
+        int inputFile = 34;
         Boolean testAll = false;
 
         if (testAll) {
@@ -47,9 +47,9 @@ public class Driver {
           if (args.length == 0) {
               System.out.println("No test file specified in args, using path\n");
               System.out.println("--------------------------");
-              System.out.println("Currently testing: " + "input_" + inputno + ".txt");
+              System.out.println("Currently testing: " + "input_" + inputFile + ".txt");
               System.out.println("--------------------------");
-              path = cwd + "/tests/input_" + inputno + ".txt";
+              path = cwd + "/tests/input_" + inputFile + ".txt";
           } else {
               path = cwd + "/" + args[0];
           }

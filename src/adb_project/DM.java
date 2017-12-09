@@ -13,10 +13,11 @@ package adb_project;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.Stack;
 
 public class DM {
@@ -25,10 +26,7 @@ public class DM {
     private int failedSiteCount;
     private ArrayList<Site> sites;
     private Set<Transaction> transactionSet = new HashSet<>();
-    private ArrayList<ArrayList<Integer>> matrix = new ArrayList<>();
-    private int[][] adjacency;
-    //private Stack<Integer> stack;
-    //int adjacencyMatrix[][];
+
 
     /**
      * Creates a Data Manager Object.  Keeps tracks of all sites
@@ -81,7 +79,7 @@ public class DM {
         if(index % 2 == 0) {
 
             if(T.getLockedVariableInfo(variable) != null
-               && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
+                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
                 for (Site site : sites) {
                     if (!site.getSiteState().equals("failed") && site.getLockCount(variable) == 1) {
                         site.removeFromLockTable(T);
@@ -121,12 +119,12 @@ public class DM {
             Site site = sites.get(siteId - 1);
 
             if(T.getLockedVariableInfo(variable) != null
-               && T.getLockedVariableInfo(variable).getInstruction().equals("R")
-               && site.getLockCount(variable) == 1) {
-                    if (!site.getSiteState().equals("failed")) {
-                        site.removeFromLockTable(T);
-                        T.removeLockedVariable(variable);
-                    }
+                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")
+                    && site.getLockCount(variable) == 1) {
+                if (!site.getSiteState().equals("failed")) {
+                    site.removeFromLockTable(T);
+                    T.removeLockedVariable(variable);
+                }
             }
 
             if(!site.getSiteState().equals("failed")) {
@@ -207,7 +205,7 @@ public class DM {
                 int not_locked = 0;
                 for(Site site: sites){
                     not_locked += (!site.getSiteState().equals("failed") &&
-                                   !site.isVariableWriteLocked(variable)) ? 1 : 0;
+                            !site.isVariableWriteLocked(variable)) ? 1 : 0;
                 }
 
                 if(not_locked >= failCheck) {
@@ -215,7 +213,7 @@ public class DM {
                     for(int i = 0; i < sites.size(); i++) {
                         Site site = sites.get(i);
                         if (site.getSiteState().equals("running") || (site.getSiteState().equals("recovered") &&
-                                                                      site.getVariable(variable).getOkToRead())) {
+                                site.getVariable(variable).getOkToRead())) {
                             if (i == 0) {
                                 value = site.getVariable(variable).getValue();
                                 T.addLockedVariable(variable);
@@ -224,7 +222,7 @@ public class DM {
                             }
                             site.lockVariable(T, variable, instruction);
                         } else if(site.getSiteState().equals("recovered") &&
-                                  !site.getVariable(variable).getOkToRead()) {
+                                !site.getVariable(variable).getOkToRead()) {
                             TM.addToWaitQueue(site.getId(), T);
                         }
                     }
@@ -314,58 +312,73 @@ public class DM {
     public Boolean deadLockCheck(Transaction T, Instruction instruction) {
 
         transactionSet.add(T);
-
-        if (this.matrix.size() < this.transactionSet.size()) {
-            for (int i=0; i<this.matrix.size(); i++ ) {
-                Integer tmpSize = this.matrix.get(i).size();
-                for (int j=tmpSize; j<this.transactionSet.size(); j++) {
-                    this.matrix.get(i).add(0);
-                }
-            }
-            for (int i=this.matrix.size(); i < this.transactionSet.size(); i++) {
-                this.matrix.add(i, new ArrayList<Integer>(this.transactionSet.size()));
-                for (int j=0; j<this.transactionSet.size(); j++) {
-                    this.matrix.get(i).add(0);
-                }
-            }
-        }
+        int[][] adjacency;
+        ArrayList<ArrayList<Integer>> matrix = new ArrayList<>();
 
         Integer index = instruction.getVariable();
-        String variable = "x" + index.toString();
-        String type = instruction.getInstruction();
+        String currentVariable = "x" + index;
+        Set<Transaction> deadlockTransCheckSet = new HashSet<>();
+        deadlockTransCheckSet.add(T);
+        Queue<String> variablesLocked = new LinkedList<>(T.getVariablesLocked());
+        variablesLocked.add(currentVariable);
         Site site;
 
-        if (index%2 == 0) {
-            Random randomGenerator = new Random();
-            Integer siteId;
-            site = sites.get(randomGenerator.nextInt(9));
+        // Builds transaction set
+        while(!variablesLocked.isEmpty()) {
+            String variable = variablesLocked.remove();
+            site = getSite(index);
+            Set<Transaction> temp = site.getTransactionsLockedOnVariable(variable);
 
-            while(!site.getSiteState().equals("running")) {
-                siteId = randomGenerator.nextInt(9);
-                site = sites.get(siteId);
-            }
-        } else {
-            Integer siteId = 1 + index % 10;
-            site = sites.get(siteId - 1);
+            if(temp != null)
+                deadlockTransCheckSet.addAll(temp);
+
+            temp = TM.getTransactionsFromLockQueue(variable);
+            if(temp != null)
+                deadlockTransCheckSet.addAll(temp);
         }
 
-        Transaction existingTransaction = site.getTransactionThatLockedVariable(variable);
-        Instruction existingInstruction = site.getInstructionThatLockedVariable(variable);
+        if (matrix.size() < deadlockTransCheckSet.size()) {
+            for (int i = 0; i < matrix.size(); i++ ) {
+                Integer tmpSize = matrix.get(i).size();
+                for (int j = tmpSize; j < deadlockTransCheckSet.size(); j++) {
+                    matrix.get(i).add(0);
+                }
+            }
+            for (int i = matrix.size(); i < deadlockTransCheckSet.size(); i++) {
+                matrix.add(i, new ArrayList<>(deadlockTransCheckSet.size()));
+                for (int j = 0; j < deadlockTransCheckSet.size(); j++) {
+                    matrix.get(i).add(0);
+                }
+            }
+        }
 
-        if (existingInstruction != null) {
-            if (!(type.equals("R") && type.equals(existingInstruction.getInstruction()))) {
-                if (this.matrix.size() > (T.getID()-1)) {
-                    if (this.matrix.get(T.getID()-1).size() >(existingTransaction.getID()-1)) {
-                        this.matrix.get(T.getID()-1).set(existingTransaction.getID()-1, 1);
+        variablesLocked = new LinkedList<>(T.getVariablesLocked());
+
+        while(!variablesLocked.isEmpty()) {
+
+            String tempVariable = variablesLocked.remove();
+            Integer tempIndex = Integer.parseInt(tempVariable.replaceAll("\\D+",""));
+            String type = instruction.getInstruction();
+            site = getSite(tempIndex);
+
+            Transaction existingTransaction = site.getTransactionThatLockedVariable(tempVariable);
+            Instruction existingInstruction = site.getInstructionThatLockedVariable(tempVariable);
+
+            if (existingInstruction != null) {
+                if (!(type.equals("R") && type.equals(existingInstruction.getInstruction()))) {
+                    if (matrix.size() > (T.getID() - 1)) {
+                        if (matrix.get(T.getID() - 1).size() > (existingTransaction.getID() - 1)) {
+                            matrix.get(T.getID() - 1).set(existingTransaction.getID() - 1, 1);
+                        }
                     }
                 }
             }
         }
 
-        this.adjacency = new int[this.matrix.size()][this.transactionSet.size()];
-        for (int i=0; i<this.matrix.size(); i++) {
-            for (int j=0; j<this.transactionSet.size(); j++) {
-                adjacency[i][j] = this.matrix.get(i).get(j);
+        adjacency = new int[matrix.size()][deadlockTransCheckSet.size()];
+        for (int i = 0; i < matrix.size(); i++) {
+            for (int j = 0; j < deadlockTransCheckSet.size(); j++) {
+                adjacency[i][j] = matrix.get(i).get(j);
             }
         }
 
@@ -378,14 +391,14 @@ public class DM {
         if(cycleExists) {
             Transaction tAbort = T;
             Integer age = T.getStartTime();
-            for(Transaction t : transactionSet) {
+            for(Transaction t : deadlockTransCheckSet) {
                 if(t.getStartTime() > age) {
                     tAbort = t;
                     age = t.getStartTime();
                 }
             }
             System.out.println("T" + tAbort.getID().toString() + " ABORTED due to attempted lock on variable "
-                    + variable);
+                    + currentVariable);
             abort(tAbort);
             return true;
         }
@@ -433,6 +446,24 @@ public class DM {
         }
     }
 
+    private Site getSite(Integer index) {
+        Site site;
+        if (index % 2 == 0) {
+            Random randomGenerator = new Random();
+            Integer siteId;
+            site = sites.get(randomGenerator.nextInt(9));
+
+            while(!site.getSiteState().equals("running")) {
+                siteId = randomGenerator.nextInt(9);
+                site = sites.get(siteId);
+            }
+        } else {
+            Integer siteId = 1 + index % 10;
+            site = sites.get(siteId - 1);
+        }
+        return site;
+    }
+
     private void abort(Transaction T) {
 
         TM.abort(T);
@@ -465,13 +496,13 @@ public class DM {
             if(index % 2 == 0) {
                 for(Site site: sites) {
                     if(!site.getSiteState().equals("failed") && (T.getOnSites().get(site.getId()) != 0)
-                       && site.isVariableLocked(variable)) {
+                            && site.isVariableLocked(variable)) {
                         value = site.handleLockTable(T, variable, TM.getTime());
                     }
                 }
                 if(value != null)
                     System.out.println("T" + T.getID().toString() + " committed " + variable +
-                                       " to all available sites " + ": " + value.toString());
+                            " to all available sites " + ": " + value.toString());
 
             } else {
                 Integer site_no = 1 + index % 10;
@@ -479,7 +510,7 @@ public class DM {
                 value = site.handleLockTable(T, variable, TM.getTime());
                 if(value != null)
                     System.out.println("T" + T.getID().toString() +" committed " + variable + " to Site " +
-                                       sites.get(0).getId() + ": " + value.toString());
+                            sites.get(0).getId() + ": " + value.toString());
             }
             checkLockQueue(variable);
         }
@@ -545,18 +576,19 @@ public class DM {
     }
 
     private Boolean checkGraph(int adjacency_matrix2[][], int source) {
+
         Stack<Integer> stack = new Stack<>();
         int adjacencyMatrix[][];
-        int adjacency_matrix[][] = new int[adjacency_matrix2[0].length+1][adjacency_matrix2[0].length+1];
+        int adjacency_matrix[][] = new int[adjacency_matrix2[0].length + 1][adjacency_matrix2[0].length+1];
 
-        for (int i=0; i<adjacency_matrix2[0].length + 1; i++) {
-            for (int j=0; j<adjacency_matrix2[0].length + 1; j++) {
+        for (int i = 0; i < adjacency_matrix2[0].length + 1; i++) {
+            for (int j = 0; j < adjacency_matrix2[0].length + 1; j++) {
                 if (i == 0) {
                     adjacency_matrix[i][j] = 0;
                 } else if (j == 0) {
-                    adjacency_matrix[i][j] = 0;  
+                    adjacency_matrix[i][j] = 0;
                 } else {
-                    adjacency_matrix[i][j] = adjacency_matrix2[i-1][j-1];
+                    adjacency_matrix[i][j] = adjacency_matrix2[i - 1][j - 1];
                 }
             }
         }
@@ -567,27 +599,26 @@ public class DM {
         for (int sourcevertex = 1; sourcevertex <= number_of_nodes; sourcevertex++) {
             for (int destinationvertex = 1; destinationvertex <= number_of_nodes; destinationvertex++) {
                 adjacencyMatrix[sourcevertex][destinationvertex] =
-                    adjacency_matrix[sourcevertex][destinationvertex];
+                        adjacency_matrix[sourcevertex][destinationvertex];
             }
         }
- 
-        int visited[] = new int[number_of_nodes + 1];   
-        int element = source;   
-        int destination = source;     
-        visited[source] = 1;    
+
+        int visited[] = new int[number_of_nodes + 1];
+        int element = source;
+        int destination = source;
+        visited[source] = 1;
         stack.push(source);
- 
+
         while (!stack.isEmpty()) {
             element = stack.peek();
-            destination = element;  
+            destination = element;
             while (destination <= number_of_nodes) {
                 if (adjacencyMatrix[element][destination] == 1 && visited[destination] == 1) {
                     if (stack.contains(destination)) {
-                        //System.out.println("------ GRAPH CONTAINS CYCLE ------");
                         return true;
                     }
                 }
- 
+
                 if (adjacencyMatrix[element][destination] == 1 && visited[destination] == 0) {
                     stack.push(destination);
                     visited[destination] = 1;
@@ -598,7 +629,7 @@ public class DM {
                 }
                 destination++;
             }
-            stack.pop();  
+            stack.pop();
         }
         return false;
     }

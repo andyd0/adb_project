@@ -217,6 +217,19 @@ public class Site {
         return lockedTransactions;
     }
 
+    public Set<Transaction> getTransactionsLockedOnVariable(String varId){
+        Set<Transaction> lockedTransactions = new HashSet<>();
+        HashMap<Transaction, Instruction> transactions = this.lockTable.get(varId);
+        if(transactions != null) {
+            for (HashMap.Entry<Transaction, Instruction> t : transactions.entrySet()) {
+                lockedTransactions.add(t.getKey());
+            }
+        } else {
+            lockedTransactions = null;
+        }
+        return lockedTransactions;
+    }
+
     /**
      * Removes a transaction from the site's lock table
      * @param T - transaction object

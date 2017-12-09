@@ -11,10 +11,7 @@
 
 package adb_project;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
 public class TM {
 
@@ -253,6 +250,23 @@ public class TM {
             waitQueue.put(siteId, queue);
         } else {
             waitQueue.get(siteId).add(transaction);
+        }
+    }
+
+//    public static HashMap<String, Queue<Transaction>> getLockQueue() {
+//        return lockQueue;
+//    }
+
+    public static Set<Transaction> getTransactionsFromLockQueue(String variable) {
+        if(lockQueue.get(variable) != null) {
+            Queue<Transaction> transactions = new LinkedList<>(lockQueue.get(variable));
+            Set<Transaction> transactionSet = new HashSet<>();
+            while (!transactions.isEmpty()) {
+                transactionSet.add(transactions.remove());
+            }
+            return transactionSet;
+        } else {
+            return null;
         }
     }
 
