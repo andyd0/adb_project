@@ -230,6 +230,10 @@ public class Site {
         return lockedTransactions;
     }
 
+    public HashMap<Transaction, Instruction> getTransactionsLockedInfoOnVariable(String varId){
+        return this.lockTable.get(varId);
+    }
+
     /**
      * Removes a transaction from the site's lock table
      * @param T - transaction object

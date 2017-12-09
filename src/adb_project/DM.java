@@ -313,7 +313,7 @@ public class DM {
 
         transactionSet.add(T);
         int[][] adjacency;
-        ArrayList<ArrayList<Integer>> matrix = new ArrayList<>();
+        //ArrayList<ArrayList<Integer>> matrix = new ArrayList<>();
 
         Integer index = instruction.getVariable();
         String currentVariable = "x" + index;
@@ -337,48 +337,52 @@ public class DM {
                 deadlockTransCheckSet.addAll(temp);
         }
 
-        if (matrix.size() < deadlockTransCheckSet.size()) {
-            for (int i = 0; i < matrix.size(); i++ ) {
-                Integer tmpSize = matrix.get(i).size();
-                for (int j = tmpSize; j < deadlockTransCheckSet.size(); j++) {
-                    matrix.get(i).add(0);
-                }
-            }
-            for (int i = matrix.size(); i < deadlockTransCheckSet.size(); i++) {
-                matrix.add(i, new ArrayList<>(deadlockTransCheckSet.size()));
-                for (int j = 0; j < deadlockTransCheckSet.size(); j++) {
-                    matrix.get(i).add(0);
-                }
-            }
+        int[][] matrix = new int[deadlockTransCheckSet.size()][deadlockTransCheckSet.size()];
+        int current;
+
+        if (T.getID() > deadlockTransCheckSet.size()) {
+            current = T.getID() - deadlockTransCheckSet.size();
+        } else {
+            current = T.getID();
         }
 
-        variablesLocked = new LinkedList<>(T.getVariablesLocked());
+        if(deadlockTransCheckSet.size() > 1) {
 
-        while(!variablesLocked.isEmpty()) {
+            variablesLocked = new LinkedList<>(T.getVariablesLocked());
 
-            String tempVariable = variablesLocked.remove();
-            Integer tempIndex = Integer.parseInt(tempVariable.replaceAll("\\D+",""));
-            String type = instruction.getInstruction();
-            site = getSite(tempIndex);
+            while (!variablesLocked.isEmpty()) {
 
-            Transaction existingTransaction = site.getTransactionThatLockedVariable(tempVariable);
-            Instruction existingInstruction = site.getInstructionThatLockedVariable(tempVariable);
+                String tempVariable = variablesLocked.remove();
+                Integer tempIndex = Integer.parseInt(tempVariable.replaceAll("\\D+", ""));
+                String type = instruction.getInstruction();
+                site = getSite(tempIndex);
 
-            if (existingInstruction != null) {
-                if (!(type.equals("R") && type.equals(existingInstruction.getInstruction()))) {
-                    if (matrix.size() > (T.getID() - 1)) {
-                        if (matrix.get(T.getID() - 1).size() > (existingTransaction.getID() - 1)) {
-                            matrix.get(T.getID() - 1).set(existingTransaction.getID() - 1, 1);
+                HashMap<Transaction, Instruction> temp = site.getTransactionsLockedInfoOnVariable(tempVariable);
+
+                for (HashMap.Entry<Transaction, Instruction> t : temp.entrySet()) {
+                    Transaction existingTransaction = t.getKey();
+                    Instruction existingInstruction = t.getValue();
+                    int existing;
+
+                    if (existingTransaction.getID() > deadlockTransCheckSet.size()) {
+                        existing = T.getID() - deadlockTransCheckSet.size();
+                    } else {
+                        existing = T.getID();
+                    }
+
+                    if (existingInstruction != null) {
+                        if (!(type.equals("R") && type.equals(existingInstruction.getInstruction()))) {
+                            matrix[current - 1][existing - 1] = 1;
                         }
                     }
                 }
             }
         }
 
-        adjacency = new int[matrix.size()][deadlockTransCheckSet.size()];
-        for (int i = 0; i < matrix.size(); i++) {
+        adjacency = new int[deadlockTransCheckSet.size()][deadlockTransCheckSet.size()];
+        for (int i = 0; i < deadlockTransCheckSet.size(); i++) {
             for (int j = 0; j < deadlockTransCheckSet.size(); j++) {
-                adjacency[i][j] = matrix.get(i).get(j);
+                adjacency[i][j] = matrix[i][j];
             }
         }
 
