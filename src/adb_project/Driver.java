@@ -21,7 +21,7 @@ public class Driver {
     public static void main(String[] args) throws IOException {
         String path = "";
         String cwd = System.getProperty("user.dir");
-        int inputno = 16;
+        int inputno = 1;
 
         Boolean testAll = false;
 

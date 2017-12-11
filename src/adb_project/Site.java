@@ -230,10 +230,6 @@ public class Site {
         return lockedTransactions;
     }
 
-    public HashMap<Transaction, Instruction> getTransactionsLockedInfoOnVariable(String varId){
-        return this.lockTable.get(varId);
-    }
-
     /**
      * Removes a transaction from the site's lock table
      * @param T - transaction object
@@ -273,30 +269,6 @@ public class Site {
             }
         }
         lockTable = initializeLockTable();
-    }
-
-    public Transaction getTransactionThatLockedVariable(String varId) {
-        HashMap < Transaction, Instruction > map = this.lockTable.get(varId);
-        Transaction t = null;
-        if (map == null) {
-            return null;
-        }
-        for (HashMap.Entry < Transaction, Instruction > entry: map.entrySet()) {
-            t = entry.getKey();
-        }
-        return t;
-    }
-
-    public Instruction getInstructionThatLockedVariable(String varId) {
-        HashMap < Transaction, Instruction > map = this.lockTable.get(varId);
-        Instruction i = null;
-        if (map == null) {
-            return null;
-        }
-        for (HashMap.Entry < Transaction, Instruction > entry: map.entrySet()) {
-            i = entry.getValue();
-        }
-        return i;
     }
 
     /**

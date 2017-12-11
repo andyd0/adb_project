@@ -20,6 +20,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
 
+
 public class DM {
 
     private final Integer MAX_SITES = 10;
@@ -37,6 +38,7 @@ public class DM {
         sites = initializeSites();
     }
 
+
     /**
      * Initializes the sites array list
      * @return ArrayList - ArrayList of sites
@@ -49,6 +51,7 @@ public class DM {
         }
         return sites;
     }
+
 
     /**
      * Handles all write operations
@@ -71,19 +74,19 @@ public class DM {
     public void write(Transaction T, Instruction instruction) {
 
         Integer index = instruction.getVariable();
-        String variable = "x" + index.toString();
+        String varId = "x" + index.toString();
 
 
         // Getting a count of failed sites for later checking against what is
         // not locked
         if(index % 2 == 0) {
 
-            if(T.getLockedVariableInfo(variable) != null
-                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")) {
+            if(T.getLockedVariableInfo(varId) != null
+                    && T.getLockedVariableInfo(varId).getInstruction().equals("R")) {
                 for (Site site : sites) {
-                    if (!site.getSiteState().equals("failed") && site.getLockCount(variable) == 1) {
+                    if (!site.getSiteState().equals("failed") && site.getLockCount(varId) == 1) {
                         site.removeFromLockTable(T);
-                        T.removeLockedVariable(variable);
+                        T.removeLockedVariable(varId);
                     }
                 }
             }
@@ -96,21 +99,23 @@ public class DM {
             // failCheck then we can lock
             int not_locked = 0;
             for(Site site: sites){
-                not_locked += (!site.getSiteState().equals("failed") && !site.isVariableLocked(variable)) ? 1 : 0;
+                not_locked += (!site.getSiteState().equals("failed") && !site.isVariableLocked(varId)) ? 1 : 0;
             }
 
             if(not_locked >= failCheck) {
                 for (Site site : sites) {
                     if (!site.getSiteState().equals("failed")) {
-                        site.lockVariable(T, variable, instruction);
+                        site.lockVariable(T, varId, instruction);
                     }
                 }
 
-                T.addLockedVariable(variable);
-                T.addLockedVariableType(variable, instruction);
+                T.addLockedVariable(varId);
+                T.addLockedVariableType(varId, instruction);
+                T.removeFromDependsOn(varId);
 
             } else {
-                TM.addToLockQueue(variable, T);
+                checkDependenceOn(varId, T);
+                TM.addToLockQueue(varId, T);
             }
 
         } else {
@@ -118,29 +123,31 @@ public class DM {
             Integer siteId = 1 + index % 10;
             Site site = sites.get(siteId - 1);
 
-            if(T.getLockedVariableInfo(variable) != null
-                    && T.getLockedVariableInfo(variable).getInstruction().equals("R")
-                    && site.getLockCount(variable) == 1) {
+            if(T.getLockedVariableInfo(varId) != null
+                    && T.getLockedVariableInfo(varId).getInstruction().equals("R")
+                    && site.getLockCount(varId) == 1) {
                 if (!site.getSiteState().equals("failed")) {
                     site.removeFromLockTable(T);
-                    T.removeLockedVariable(variable);
+                    T.removeLockedVariable(varId);
                 }
             }
 
             if(!site.getSiteState().equals("failed")) {
-                if(site.isVariableLocked(variable)) {
-                    TM.addToLockQueue(variable, T);
+                if(site.isVariableLocked(varId)) {
+                    checkDependenceOn(varId, T);
+                    TM.addToLockQueue(varId, T);
                 } else {
-                    site.lockVariable(T, variable, instruction);
+                    site.lockVariable(T, varId, instruction);
 
-                    T.addLockedVariable(variable);
-                    T.addLockedVariableType(variable, instruction);
+                    T.addLockedVariable(varId);
+                    T.addLockedVariableType(varId, instruction);
                 }
             } else if(site.getSiteState().equals("failed")) {
                 TM.addToWaitQueue(siteId, T);
             }
         }
     }
+
 
     /**
      * Handles all read operations
@@ -174,7 +181,7 @@ public class DM {
 
 
         // Making sure that the site being checked is not down
-        if(T.checkLockedVariableType(variable)) {
+        if(T.checkLockedVariableType(variable) != null && T.checkLockedVariableType(variable).equals("W")) {
             value = T.getLockedVariableInfo(variable).getValue();
             System.out.println(transactionID + " read " + variable + ": " + value.toString());
         } else if(index % 2 == 0) {
@@ -227,6 +234,7 @@ public class DM {
                         }
                     }
                 } else {
+                    checkDependenceOn(variable, T);
                     TM.addToLockQueue(variable, T);
                 }
             }
@@ -242,6 +250,7 @@ public class DM {
                     value = site.getVariable(variable).getPreviousValue(T.getStartTime());
                     System.out.println(transactionID + " read " + variable + ": " + value.toString());
                 } else if(site.isVariableWriteLocked(variable)) {
+                    checkDependenceOn(variable, T);
                     TM.addToLockQueue(variable, T);
                 } else {
                     site.lockVariable(T, variable, instruction);
@@ -255,6 +264,7 @@ public class DM {
             }
         }
     }
+
 
     /**
      * Handles site failure.  Multiple operations are handled here.  Site is marked
@@ -275,6 +285,7 @@ public class DM {
         failedSiteCount++;
     }
 
+
     /**
      * Gets the current site fail count
      * @return Integer
@@ -282,6 +293,7 @@ public class DM {
     public Integer getFailCount() {
         return failedSiteCount;
     }
+
 
     /**
      * Handles site recovery.  Multiple operations are handled here.  Site is marked
@@ -309,106 +321,164 @@ public class DM {
         }
     }
 
+
     public Boolean deadLockCheck(Transaction T, Instruction instruction) {
 
         transactionSet.add(T);
         int[][] adjacency;
-        //ArrayList<ArrayList<Integer>> matrix = new ArrayList<>();
 
-        Integer index = instruction.getVariable();
-        String currentVariable = "x" + index;
-        Set<Transaction> deadlockTransCheckSet = new HashSet<>();
-        deadlockTransCheckSet.add(T);
-        Queue<String> variablesLocked = new LinkedList<>(T.getVariablesLocked());
-        variablesLocked.add(currentVariable);
-        Site site;
+        if(transactionSet.size() > 1) {
+            Integer index = instruction.getVariable();
+            String currentVarId = "x" + index;
 
-        // Builds transaction set
-        while(!variablesLocked.isEmpty()) {
-            String variable = variablesLocked.remove();
-            site = getSite(index);
-            Set<Transaction> temp = site.getTransactionsLockedOnVariable(variable);
+            ArrayList<ArrayList<Integer>> matrix = new ArrayList<>();
 
-            if(temp != null)
-                deadlockTransCheckSet.addAll(temp);
+            int max = 0;
+            for (Transaction t : transactionSet) {
+                max = (t.getID() > max) ? t.getID() : max;
+            }
 
-            temp = TM.getTransactionsFromLockQueue(variable);
-            if(temp != null)
-                deadlockTransCheckSet.addAll(temp);
-        }
-
-        int[][] matrix = new int[deadlockTransCheckSet.size()][deadlockTransCheckSet.size()];
-        int current;
-
-        if (T.getID() > deadlockTransCheckSet.size()) {
-            current = T.getID() - deadlockTransCheckSet.size();
-        } else {
-            current = T.getID();
-        }
-
-        if(deadlockTransCheckSet.size() > 1) {
-
-            variablesLocked = new LinkedList<>(T.getVariablesLocked());
-
-            while (!variablesLocked.isEmpty()) {
-
-                String tempVariable = variablesLocked.remove();
-                Integer tempIndex = Integer.parseInt(tempVariable.replaceAll("\\D+", ""));
-                String type = instruction.getInstruction();
-                site = getSite(tempIndex);
-
-                HashMap<Transaction, Instruction> temp = site.getTransactionsLockedInfoOnVariable(tempVariable);
-
-                for (HashMap.Entry<Transaction, Instruction> t : temp.entrySet()) {
-                    Transaction existingTransaction = t.getKey();
-                    Instruction existingInstruction = t.getValue();
-                    int existing;
-
-                    if (existingTransaction.getID() > deadlockTransCheckSet.size()) {
-                        existing = T.getID() - deadlockTransCheckSet.size();
-                    } else {
-                        existing = T.getID();
-                    }
-
-                    if (existingInstruction != null) {
-                        if (!(type.equals("R") && type.equals(existingInstruction.getInstruction()))) {
-                            matrix[current - 1][existing - 1] = 1;
-                        }
-                    }
+            for (int i = 0; i < matrix.size(); i++) {
+                Integer tmpSize = matrix.get(i).size();
+                for (int j = tmpSize; j < max; j++) {
+                    matrix.get(i).add(0);
                 }
             }
-        }
-
-        adjacency = new int[deadlockTransCheckSet.size()][deadlockTransCheckSet.size()];
-        for (int i = 0; i < deadlockTransCheckSet.size(); i++) {
-            for (int j = 0; j < deadlockTransCheckSet.size(); j++) {
-                adjacency[i][j] = matrix[i][j];
-            }
-        }
-
-        Boolean cycleExists = false;
-
-        if (adjacency[0].length > 1) {
-            cycleExists = checkGraph(adjacency, 1);
-        }
-
-        if(cycleExists) {
-            Transaction tAbort = T;
-            Integer age = T.getStartTime();
-            for(Transaction t : deadlockTransCheckSet) {
-                if(t.getStartTime() > age) {
-                    tAbort = t;
-                    age = t.getStartTime();
+            for (int i = matrix.size(); i < max; i++) {
+                matrix.add(i, new ArrayList<>(max));
+                for (int j = 0; j < max; j++) {
+                    matrix.get(i).add(0);
                 }
             }
-            System.out.println("T" + tAbort.getID().toString() + " ABORTED due to attempted lock on variable "
-                    + currentVariable);
-            abort(tAbort);
-            return true;
-        }
 
-        return cycleExists;
+            Site site = getSite(index);
+            Boolean varLocked = false;
+
+            if((T.checkLockedVariableType(currentVarId) != null
+                    && T.checkLockedVariableType(currentVarId).equals("R"))) {
+                varLocked = false;
+            } else if(site.isVariableLocked(currentVarId)) {
+                varLocked = true;
+            }
+
+            Set<Transaction> allTransactions = new HashSet<>();
+            HashMap<Integer, LinkedList<Transaction>> dependsOnAll = new HashMap<>();
+            HashMap<Integer, LinkedList<Transaction>> dependsOnItAll = new HashMap<>();
+
+            LinkedList<Transaction> currentBuildDependsOn = buildDependsOn(T);
+            LinkedList<Transaction> currentBuildDependsOnIt = buildDependsOnIt(T);
+
+            if (varLocked) {
+                Set<Transaction> ts = site.getTransactionsLockedOnVariable(currentVarId);
+                for (Transaction t : ts) {
+                    if (currentBuildDependsOn.isEmpty() || !currentBuildDependsOn.contains(t))
+                        currentBuildDependsOn.add(t);
+                }
+            }
+
+            dependsOnAll.put(T.getID(), currentBuildDependsOn);
+            dependsOnItAll.put(T.getID(), currentBuildDependsOnIt);
+
+
+            for(Transaction t : transactionSet) {
+                LinkedList<Transaction> dependsCheck = buildDependsOn(t);
+                LinkedList<Transaction> dependsOnItCheck = buildDependsOnIt(t);
+                if(dependsCheck.contains(T) || dependsOnItCheck.contains(T)) {
+                    dependsOnAll.put(t.getID(), buildDependsOn(t));
+                    LinkedList<Transaction> dependsOnItTemp = buildDependsOnIt(t);
+                    if(t.checkLockedVariableType(currentVarId) != null && varLocked) {
+                        dependsOnItTemp.add(T);
+                    }
+                    dependsOnItAll.put(t.getID(), dependsOnItTemp);
+                }
+            }
+
+            for(HashMap.Entry<Integer, LinkedList<Transaction>> tSetDepsOn : dependsOnAll.entrySet()) {
+                LinkedList<Transaction> ts = tSetDepsOn.getValue();
+                while (!ts.isEmpty()) {
+                    Transaction t = ts.remove();
+                    allTransactions.add(t);
+                    matrix.get(t.getID() - 1).set(T.getID() - 1, 1);
+                }
+            }
+
+            for(HashMap.Entry<Integer, LinkedList<Transaction>> tSetDepsOnIt : dependsOnItAll.entrySet()) {
+                LinkedList<Transaction> ts = tSetDepsOnIt.getValue();
+                while (!ts.isEmpty()) {
+                    Transaction t = ts.remove();
+                    allTransactions.add(t);
+                    matrix.get(T.getID() - 1).set(t.getID() - 1, 1);
+                }
+            }
+
+            adjacency = new int[max][max];
+            for (int i = 0; i < max; i++) {
+                for (int j = 0; j < max; j++) {
+                    adjacency[i][j] = matrix.get(i).get(j);
+                }
+            }
+
+//            for (int i = 0; i < max; i++) {
+//                for (int j = 0; j < max; j++) {
+//                    System.out.print(adjacency[i][j]);
+//                }
+//                System.out.println();
+//            }
+//            System.out.println();
+
+            Boolean cycleExists = false;
+
+            if (adjacency[0].length > 1) {
+                cycleExists = checkGraph(adjacency, 1);
+            }
+
+            allTransactions.add(T);
+
+            if(cycleExists) {
+                Transaction tAbort = T;
+                Integer age = T.getStartTime();
+                for(Transaction t : allTransactions) {
+                    if(t.getStartTime() > age) {
+                        tAbort = t;
+                        age = t.getStartTime();
+                    }
+                }
+                System.out.println("T" + tAbort.getID().toString() + " ABORTED due to attempted lock on variable "
+                        + currentVarId);
+                abort(tAbort);
+                return true;
+            }
+
+            return cycleExists;
+        }
+        return false;
     }
+
+    private LinkedList<Transaction> buildDependsOnIt(Transaction T) {
+        LinkedList<Transaction> dependsOnIt = new LinkedList<>();
+        if(T.checkDependsOnIt()) {
+            HashMap<String, LinkedList<Transaction>> dOnIt = new HashMap<>(T.getDependsOnIt());
+            for(HashMap.Entry<String, LinkedList<Transaction>> ds : dOnIt.entrySet()) {
+                LinkedList<Transaction> ts = ds.getValue();
+                    dependsOnIt.addAll(ts);
+            }
+        }
+        return dependsOnIt;
+    }
+
+
+    private LinkedList<Transaction> buildDependsOn(Transaction T) {
+        LinkedList<Transaction> dependsOn = new LinkedList<>();
+                if(T.checkDependsOn()) {
+            HashMap<String, LinkedList<Transaction>> dOn = new HashMap<>(T.getDependsOn());
+            for(HashMap.Entry<String, LinkedList<Transaction>> ds : dOn.entrySet()) {
+                LinkedList<Transaction> ts = ds.getValue();
+                dependsOn.addAll(ts);
+            }
+        }
+        return dependsOn;
+    }
+
 
     /**
      * Handles checking of the lock queue when a transaction
@@ -440,6 +510,24 @@ public class DM {
         }
     }
 
+
+    private void checkDependenceOn(String varId, Transaction T) {
+        Site site = getSite(Integer.parseInt(varId.replaceAll("\\D+","")));
+        Set<Transaction> tLocks = site.getTransactionsLockedOnVariable(varId);
+        Set<Transaction> tQueue = TM.getTransactionsFromLockQueue(varId);
+
+        if(tLocks != null)
+            for(Transaction t : tLocks) {
+                t.addToDependsOnIt(varId, T);
+                T.addToDependsOn(varId, t);
+            }
+
+        if(tQueue != null)
+            for(Transaction t : tQueue)
+                t.addToDependsOn(varId, T);
+    }
+
+
     /**
      * Removes transactions from a lock table if they have been `ed
      * @param T - a transaction object
@@ -449,6 +537,7 @@ public class DM {
             site.removeFromLockTable(T);
         }
     }
+
 
     private Site getSite(Integer index) {
         Site site;
@@ -468,6 +557,7 @@ public class DM {
         return site;
     }
 
+
     private void abort(Transaction T) {
 
         TM.abort(T);
@@ -481,6 +571,7 @@ public class DM {
         }
     }
 
+
     /**
      * Terminates a transaction.  The function checks the queue of
      * locked variables in the transaction object and handles the commits
@@ -492,34 +583,37 @@ public class DM {
         Queue<String> variables = T.getVariablesLocked();
 
         while(!variables.isEmpty()) {
-            String variable = variables.remove();
-            Integer index = Integer.parseInt(variable.replaceAll("\\D+",""));
+
+            String varId = variables.remove();
+            T.removeFromDependsOnIt(varId);
+            Integer index = Integer.parseInt(varId.replaceAll("\\D+",""));
 
             Integer value = null;
 
             if(index % 2 == 0) {
                 for(Site site: sites) {
                     if(!site.getSiteState().equals("failed") && (T.getOnSites().get(site.getId()) != 0)
-                            && site.isVariableLocked(variable)) {
-                        value = site.handleLockTable(T, variable, TM.getTime());
+                            && site.isVariableLocked(varId)) {
+                        value = site.handleLockTable(T, varId, TM.getTime());
                     }
                 }
                 if(value != null)
-                    System.out.println("T" + T.getID().toString() + " committed " + variable +
+                    System.out.println("T" + T.getID().toString() + " committed " + varId +
                             " to all available sites " + ": " + value.toString());
 
             } else {
                 Integer site_no = 1 + index % 10;
                 Site site = sites.get(site_no - 1);
-                value = site.handleLockTable(T, variable, TM.getTime());
+                value = site.handleLockTable(T, varId, TM.getTime());
                 if(value != null)
-                    System.out.println("T" + T.getID().toString() +" committed " + variable + " to Site " +
+                    System.out.println("T" + T.getID().toString() +" committed " + varId + " to Site " +
                             sites.get(0).getId() + ": " + value.toString());
             }
-            checkLockQueue(variable);
+            checkLockQueue(varId);
         }
         T.stopTransaction();
     }
+
 
     /**
      * Prints all committed variables at all sites sorted by site
@@ -542,6 +636,7 @@ public class DM {
         }
     }
 
+
     /**
      * Dump function that prints out the committed values of a specific
      * variable at all sites
@@ -556,6 +651,7 @@ public class DM {
             }
         }
     }
+
 
     /**
      * Dump function that prints out the variables that have been
@@ -578,6 +674,7 @@ public class DM {
         }
         System.out.println("");
     }
+
 
     private Boolean checkGraph(int adjacency_matrix2[][], int source) {
 

@@ -196,14 +196,16 @@ public class TM {
     /**
      * Removes a transaction from a variable lock queue and returns
      * a transaction object
-     * @param variableId - variable id
+     * @param varId - variable id
      * @return T - transaction object if there is one on queue
      */
-    public static Transaction handleLockQueue(String variableId) {
-        if(lockQueue.get(variableId).size() == 0) {
+    public static Transaction handleLockQueue(String varId) {
+        if(lockQueue.get(varId).size() == 0) {
             return null;
         } else {
-            return lockQueue.get(variableId).remove();
+            Transaction T = lockQueue.get(varId).remove();
+            T.removeFromDependsOn(varId);
+            return T;
         }
     }
 
@@ -265,6 +267,15 @@ public class TM {
                 transactionSet.add(transactions.remove());
             }
             return transactionSet;
+        } else {
+            return null;
+        }
+    }
+
+    public static Queue<Transaction> getLockQueue(String variable) {
+        if(lockQueue.get(variable) != null) {
+            Queue<Transaction> transactions = new LinkedList<>(lockQueue.get(variable));
+            return transactions;
         } else {
             return null;
         }
