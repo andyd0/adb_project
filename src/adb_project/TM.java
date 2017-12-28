@@ -13,13 +13,16 @@ package adb_project;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Set;
+
 
 public class TM {
 
     private ArrayList<Instruction> instructions;
-    private HashMap<Integer, Transaction> transactionsList;
+    private HashMap<Integer, Transaction> transactionList;
     private static HashMap<String, Queue<Transaction>> lockQueue;
     private static HashMap<Integer, Queue<Transaction>> waitQueue;
     private static Integer time = 0;
@@ -31,10 +34,11 @@ public class TM {
      */
     public TM(ArrayList<Instruction> instructions) {
         this.instructions = instructions;
-        this.transactionsList = new HashMap<>();
-        this.lockQueue = new HashMap<>();
-        this.waitQueue = new HashMap<>();
+        transactionList = new HashMap<>();
+        lockQueue = new HashMap<>();
+        waitQueue = new HashMap<>();
     }
+
 
     /**
      * Creates a new transaction and adds it to a HashMap
@@ -55,8 +59,9 @@ public class TM {
      * @param T - a transaction
      */
     private void addToTransactionList(Integer id, Transaction T) {
-        this.transactionsList.put(id, T);
+        transactionList.put(id, T);
     }
+
 
     /**
      * Returns a transaction object
@@ -64,8 +69,9 @@ public class TM {
      * @return T - a transaction object
      */
     private Transaction getTransaction(int id) {
-        return this.transactionsList.get(id);
+        return transactionList.get(id);
     }
+
 
     /**
      * Increments the time during processing
@@ -74,6 +80,7 @@ public class TM {
         time++;
     }
 
+
     /**
      * Gets the current time during processing
      * @return Integer - time
@@ -81,6 +88,7 @@ public class TM {
     public static Integer getTime() {
         return time;
     }
+
 
     /**
      * Takes each instruction and hands off to the Data Manager where
@@ -114,7 +122,6 @@ public class TM {
                     }
 
                     transaction.addCurrentInstruction(instruction);
-
                     if(!dm.deadLockCheck(transaction, instruction) || transaction.isRunning())
                         dm.write(transaction, instruction);
 
@@ -129,11 +136,12 @@ public class TM {
 
                     transaction.addCurrentInstruction(instruction);
 
-                    if(!transaction.isReadOnly() && !dm.deadLockCheck(transaction, instruction))
-                        dm.read(transaction, instruction);
-                    else
-                        dm.read(transaction, instruction);
-
+                    if(!dm.hasWriteLock(transaction, instruction)) {
+                        if (!transaction.isReadOnly() && !dm.deadLockCheck(transaction, instruction))
+                            dm.read(transaction, instruction);
+                        else
+                            dm.read(transaction, instruction);
+                    }
                     break;
                 case "fail":
                     id = instruction.getId();
@@ -166,6 +174,7 @@ public class TM {
         }
     }
 
+
     /**
      * Sets up a transaction
      * @param instruction - an instruction object
@@ -179,14 +188,16 @@ public class TM {
         addTransaction(transaction, readOnly, startTime, instruction);
     }
 
+
     /**
      * Gets a transaction from the wait queue if there is one waiting
      * @param siteId - site ID
      * @return Transaction - a transaction object
      */
     public static Queue<Transaction> getWaitQueue(Integer siteId) {
-            return waitQueue.get(siteId);
+        return waitQueue.get(siteId);
     }
+
 
     public static Boolean checkWaitQueue(Integer siteId) {
         if(waitQueue.get(siteId) == null || waitQueue.get(siteId).size() == 0) {
@@ -196,19 +207,39 @@ public class TM {
         }
     }
 
+
+    /**
+     * Adds a transaction to a sites wait queue when the site is unavailable
+     * @param siteId - site ID
+     * @param transaction - a transaction object
+     */
+    public static void addToWaitQueue(Integer siteId, Transaction transaction) {
+        if(waitQueue.get(siteId) == null) {
+            Queue<Transaction> queue = new LinkedList<>();
+            queue.add(transaction);
+            waitQueue.put(siteId, queue);
+        } else {
+            waitQueue.get(siteId).add(transaction);
+        }
+    }
+
+
     /**
      * Removes a transaction from a variable lock queue and returns
      * a transaction object
-     * @param variableId - variable id
+     * @param varId - variable id
      * @return T - transaction object if there is one on queue
      */
-    public static Transaction handleLockQueue(String variableId) {
-        if(lockQueue.get(variableId).size() == 0) {
+    public static Transaction handleLockQueue(String varId) {
+        if(lockQueue.get(varId).size() == 0) {
             return null;
         } else {
-            return lockQueue.get(variableId).remove();
+            Transaction T = lockQueue.get(varId).remove();
+            T.removeFromDependsOn(varId);
+            return T;
         }
     }
+
 
     /**
      * Adds a a transaction to a variable lock queue
@@ -226,6 +257,7 @@ public class TM {
         }
     }
 
+
     /**
      * Gets the instruction at the start of the start of the queue.  This is to
      * handle cases where an unlock a variable may have more than one transaction
@@ -241,20 +273,30 @@ public class TM {
         }
     }
 
-    /**
-     * Adds a transaction to a sites wait queue when the site is unavailable
-     * @param siteId - site ID
-     * @param transaction - a transaction object
-     */
-    public static void addToWaitQueue(Integer siteId, Transaction transaction) {
-        if(waitQueue.get(siteId) == null) {
-            Queue<Transaction> queue = new LinkedList<>();
-            queue.add(transaction);
-            waitQueue.put(siteId, queue);
+
+    public static Set<Transaction> getTransactionsFromLockQueue(String variable) {
+        if(lockQueue.get(variable) != null) {
+            Queue<Transaction> transactions = new LinkedList<>(lockQueue.get(variable));
+            Set<Transaction> transactionSet = new HashSet<>();
+            while (!transactions.isEmpty()) {
+                transactionSet.add(transactions.remove());
+            }
+            return transactionSet;
         } else {
-            waitQueue.get(siteId).add(transaction);
+            return null;
         }
     }
+
+
+    public static Queue<Transaction> getLockQueue(String variable) {
+        if(lockQueue.get(variable) != null) {
+            Queue<Transaction> transactions = new LinkedList<>(lockQueue.get(variable));
+            return transactions;
+        } else {
+            return null;
+        }
+    }
+
 
     /**
      * Checks to see if a variable's lock queue is empty
@@ -265,27 +307,27 @@ public class TM {
         return (lockQueue.get(variableId) == null || lockQueue.get(variableId).size() == 0);
     }
 
+
     /**
      * Aborts a transaction if terminated for some reason - either because of deadlock or site
      * failure
      * @param id - transaction id
      */
     private void abort(Integer id) {
-        for (HashMap.Entry<Integer, Transaction> entry : this.transactionsList.entrySet())
+        for (HashMap.Entry<Integer, Transaction> entry : transactionList.entrySet())
         {
             HashMap<Integer, Integer> sites = entry.getValue().getOnSites();
             if(sites != null) {
                 if(sites.get(id) != null && sites.size() > 0 && sites.get(id) > 0) {
                     entry.getValue().stopTransaction();
                     System.out.println("T" + entry.getValue().getID() + " ABORTED because Site " +
-                                        id.toString() + " has failed");
+                            id.toString() + " has failed");
                 }
             }
         }
     }
 
-    //private static HashMap<String, Queue<Transaction>> lockQueue;
-    //private static HashMap<Integer, Queue<Transaction>> waitQueue;
+
     public static void abort(Transaction T) {
 
         // Remove from variable lock queue

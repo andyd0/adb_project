@@ -17,6 +17,8 @@ public class Transaction {
     private Boolean readOnly;
     private Integer startTime;
     private Boolean running;
+    private HashMap<String, LinkedList<Transaction>> dependsOnIt;
+    private HashMap<String, LinkedList<Transaction>> dependsOn;
     private Queue<String> variablesLocked;
     private HashMap<String, Instruction> variablesLockType;
     private HashMap<Integer, Integer> onSites;
@@ -47,9 +49,12 @@ public class Transaction {
         this.running = true;
         this.variablesLocked = new LinkedList<>();
         this.variablesLockType = new HashMap<>();
+        this.dependsOn = new HashMap<>();
+        this.dependsOnIt = new HashMap<>();
         this.onSites = initializeOnSites();
         this.currentInstruction = instruction;
     }
+
 
     /**
      * Returns the transaction's ID
@@ -57,6 +62,52 @@ public class Transaction {
      */
     public Integer getID() {
         return id;
+    }
+
+
+    public void addToDependsOn(String varId, Transaction t) {
+        if(dependsOn.get(varId) != null) {
+            dependsOn.get(varId).add(t);
+        } else {
+            LinkedList<Transaction> temp = new LinkedList<>();
+            temp.add(t);
+            dependsOn.put(varId, temp);
+        }
+    }
+
+
+    public void addToDependsOnIt(String varId, Transaction t) {
+        if(dependsOnIt.get(varId) != null) {
+            dependsOnIt.get(varId).add(t);
+        } else {
+            LinkedList<Transaction> temp = new LinkedList<>();
+            temp.add(t);
+            dependsOnIt.put(varId, temp);
+        }
+    }
+
+
+    public HashMap<String, LinkedList<Transaction>> getDependsOn() {
+        return dependsOn;
+    }
+
+
+    public Boolean checkDependsOn() {
+        return (dependsOn.size() > 0);
+    }
+
+
+    public void removeFromDependsOn(String varId) {
+        if(dependsOn.get(varId) != null) {
+            dependsOn.remove(varId);
+        }
+    }
+
+
+    public void removeFromDependsOnIt(String varId) {
+        if(dependsOnIt.get(varId) != null) {
+            dependsOnIt.remove(varId);
+        }
     }
 
     /**
@@ -93,10 +144,10 @@ public class Transaction {
 
     /**
      * Adds variable ID to locked variables
-     * @param variableId - string variable ID
+     * @param varId - string variable ID
      */
-    public void addLockedVariable(String variableId) {
-        variablesLocked.add(variableId);
+    public void addLockedVariable(String varId) {
+        variablesLocked.add(varId);
     }
 
     /**
@@ -107,54 +158,59 @@ public class Transaction {
         return variablesLocked;
     }
 
+
     /**
      * Adds variable and instruction to hashmap
-     * @param variable - variable id
+     * @param varId - variable id
      * @param instruction - instruction object
      */
-    public void addLockedVariableType(String variable, Instruction instruction) {
-        variablesLockType.put(variable, instruction);
+    public void addLockedVariableType(String varId, Instruction instruction) {
+        variablesLockType.put(varId, instruction);
     }
 
     /**
-     * Removes a variable from lock variable type HashMap
-     * @param variable - variable id
+     * Removes a variable from lock variable from Queue
+     * @param varId - variable id
      */
-    public void removeLockedVariable(String variable) {
-        removeLockedVariableType(variable);
+    public void removeLockedVariable(String varId) {
+        removeLockedVariableType(varId);
         Queue<String> temp = new LinkedList<>();
         while(!variablesLocked.isEmpty()) {
-            if(!variablesLocked.peek().equals(variable)) {
+            if(!variablesLocked.peek().equals(varId)) {
                 temp.add(variablesLocked.remove());
             } else {
                 variablesLocked.remove();
             }
         }
+        variablesLocked = temp;
     }
 
     /**
      * Removes a variable from lock variable type HashMap
-     * @param variable - variable id
+     * @param varId - variable id
      */
-    public void removeLockedVariableType(String variable) {
-        variablesLockType.remove(variable);
+    public void removeLockedVariableType(String varId) {
+        variablesLockType.remove(varId);
     }
 
     /**
      * Gets lock type info
-     * @param variable - variable id
+     * @param varId - variable id
      */
-    public Instruction getLockedVariableInfo(String variable) {
-        return variablesLockType.get(variable);
+    public Instruction getLockedVariableInfo(String varId) {
+        return variablesLockType.get(varId);
     }
 
     /**
      * Checks lock type info
-     * @param variable - variable id
+     * @param varId - variable id
      */
-    public Boolean checkLockedVariableType(String variable) {
-        return (variablesLockType.get(variable) != null
-                && variablesLockType.get(variable).getInstruction().equals("W"));
+    public String checkLockedVariableType(String varId) {
+        if(variablesLockType.get(varId) != null) {
+            return variablesLockType.get(varId).getInstruction();
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -208,7 +264,7 @@ public class Transaction {
      * a site
      */
     public void decOnSites(int siteId) {
-            onSites.put(siteId, onSites.get(siteId) - 1);
+        onSites.put(siteId, onSites.get(siteId) - 1);
     }
 
     public HashMap<String, Instruction> getVariablesLockType() {

@@ -21,47 +21,44 @@ public class Driver {
     public static void main(String[] args) throws IOException {
         String path = "";
         String cwd = System.getProperty("user.dir");
-        int inputno = 39;
+        int inputno = 32;
 
-        Boolean testAll = false;
+        Boolean testAll = true;
 
         if (testAll) {
-          for (int i = 1; i < 38; i++) {
-            if (i < 10) {
-              path = cwd + "/tests/input_" + i + ".txt";
-            } else {
-              path = cwd + "/tests/input_" + i + ".txt";
-            }
+            for (int i = 1; i < 38; i++) {
+                if (i < 10) {
+                    path = cwd + "/tests/input_" + i + ".txt";
+                } else {
+                    path = cwd + "/tests/input_" + i + ".txt";
+                }
 
-            System.out.println("--------------------------");
-            System.out.println("Currently testing: " + path);
-            System.out.println("--------------------------");
+                System.out.println("--------------------------");
+                System.out.println("Currently testing: " + path);
+                System.out.println("--------------------------");
+
+                Parser parser = new Parser();
+                ArrayList<Instruction> instructions = parser.getInstructions(path);
+
+                TM tm = new TM(instructions);
+                tm.processInstructions();
+            }
+        } else {
+            if (args.length == 0) {
+                System.out.println("No test file specified in args, using path\n");
+                System.out.println("--------------------------");
+                System.out.println("Currently testing: " + "input_" + inputno + ".txt");
+                System.out.println("--------------------------");
+                path = cwd + "/tests/input_" + inputno + ".txt";
+            } else {
+                path = cwd + "/" + args[0];
+            }
 
             Parser parser = new Parser();
             ArrayList<Instruction> instructions = parser.getInstructions(path);
 
             TM tm = new TM(instructions);
             tm.processInstructions();
-          }
-        } else {
-          if (args.length == 0) {
-              System.out.println("No test file specified in args, using path\n");
-              System.out.println("--------------------------");
-              System.out.println("Currently testing: " + "input_" + inputno + ".txt");
-              System.out.println("--------------------------");
-              path = cwd + "/tests/input_" + inputno + ".txt";
-          } else {
-              path = cwd + "/" + args[0];
-          }
-
-          Parser parser = new Parser();
-          ArrayList<Instruction> instructions = parser.getInstructions(path);
-
-          TM tm = new TM(instructions);
-          tm.processInstructions();
         }
     }
 }
-
-// command to run from shell: `java -classpath . adb_project.Driver input.txt`
-// test for slack

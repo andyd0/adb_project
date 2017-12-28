@@ -164,13 +164,26 @@ public class Site {
         }
     }
 
+    public boolean isVariableReadLocked(String varId) {
+
+        if(lockTable.size() != 0 && lockTable.get(varId).size() != 0) {
+            if (lockTable.get(varId).entrySet().iterator().next().getValue().getInstruction().equals("R")) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
     /**
      * Checks to see whether a variable is locked.
      * @param varId - variable ID
      * @return Boolean - true/false if variable is locked
      */
     public boolean isVariableLocked(String varId) {
-        return (lockTable.get(varId).size() != 0);
+        return ((lockTable.size() != 0) && (lockTable.get(varId).size() != 0));
     }
 
     /**
@@ -217,6 +230,20 @@ public class Site {
         return lockedTransactions;
     }
 
+
+    public Set<Transaction> getTransactionsLockedOnVariable(String varId){
+        Set<Transaction> lockedTransactions = new HashSet<>();
+        HashMap<Transaction, Instruction> transactions = this.lockTable.get(varId);
+        if(transactions != null) {
+            for (HashMap.Entry<Transaction, Instruction> t : transactions.entrySet()) {
+                lockedTransactions.add(t.getKey());
+            }
+        } else {
+            lockedTransactions = null;
+        }
+        return lockedTransactions;
+    }
+
     /**
      * Removes a transaction from the site's lock table
      * @param T - transaction object
@@ -256,30 +283,6 @@ public class Site {
             }
         }
         lockTable = initializeLockTable();
-    }
-
-    public Transaction getTransactionThatLockedVariable(String varId) {
-        HashMap < Transaction, Instruction > map = this.lockTable.get(varId);
-        Transaction t = null;
-        if (map == null) {
-            return null;
-        }
-        for (HashMap.Entry < Transaction, Instruction > entry: map.entrySet()) {
-            t = entry.getKey();
-        }
-        return t;
-    }
-
-    public Instruction getInstructionThatLockedVariable(String varId) {
-        HashMap < Transaction, Instruction > map = this.lockTable.get(varId);
-        Instruction i = null;
-        if (map == null) {
-            return null;
-        }
-        for (HashMap.Entry < Transaction, Instruction > entry: map.entrySet()) {
-            i = entry.getValue();
-        }
-        return i;
     }
 
     /**

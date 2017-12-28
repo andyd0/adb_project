@@ -6,8 +6,8 @@
 begin(T1)
 begin(T2)
 W(T1,x1,101) 
-W(T2,x2,202)
-W(T1,x2,102) 
+W(T2,x2,202) 1 deponds on it
+W(T1,x2,102) depeonds on 2 
 W(T2,x1,201)
 end(T1)
 dump()
@@ -101,10 +101,9 @@ recover(2)
 end(T1)
 
 
-T1 wrote to x6 to all sites : 66
-Transaction 1 aborted because Site 2 has failed
-T2 wrote to x8 to all sites : 88
+T1 ABORTED because Site 2 has failed
 T2 read x3: 30
+T2 committed x8 to all available sites : 88
 
 
 // Test 6
@@ -435,7 +434,7 @@ begin(T2)
 W(T1,x1,1)
 R(T2,x1)
 W(T2,x2,2)
-R(T2,x2)
+R(T2,x2)  --- WHY DOES THIS SKIP
 R(T1,x2)
 end(T1)
 end(T2)
@@ -619,6 +618,7 @@ T1 committed x1 to Site 1: 202
 
 // Test 33
 // Youngest transaction T5 gets aborted.
+// Duplicate - not sure why this was sent
 begin(T1)
 begin(T2)
 begin(T3)
@@ -694,7 +694,7 @@ T3 committed x4 to all available sites : 3
 begin(T1)
 begin(T2)
 R(T1,x3)
-W(T2,x8,88)
+W(T2,x8,88) 
 fail(2)
 R(T2,x3)
 W(T1, x4,91)
@@ -720,6 +720,9 @@ R(T2,x1)
 end(T1)
 end(T3)
 end(T2)
+
+T1 read x1: 10
+T2 read x1: 10
 
 
 // Test 37
@@ -752,7 +755,7 @@ T1 read x1: 10
 
 
 // Test 39
-// A working version of 36
+// A working version of 36 
 
 
 begin(T1)
