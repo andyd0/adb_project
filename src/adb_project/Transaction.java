@@ -9,15 +9,18 @@
 
 package adb_project;
 
-import java.util.*;
+
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
+
 
 public class Transaction {
 
     private Integer id;
     private Boolean readOnly;
-    private Integer startTime;
+    private int startTime;
     private Boolean running;
-    private HashMap<String, LinkedList<Transaction>> dependsOnIt;
     private HashMap<String, LinkedList<Transaction>> dependsOn;
     private Queue<String> variablesLocked;
     private HashMap<String, Instruction> variablesLockType;
@@ -41,7 +44,7 @@ public class Transaction {
      * @param startTime - Start time of a transaction
      * @param instruction - instruction type
      */
-    public Transaction(Integer id, Boolean readOnly, Integer startTime, Instruction instruction) {
+    public Transaction(Integer id, Boolean readOnly, int startTime, Instruction instruction) {
 
         this.id = id;
         this.readOnly = readOnly;
@@ -50,7 +53,6 @@ public class Transaction {
         this.variablesLocked = new LinkedList<>();
         this.variablesLockType = new HashMap<>();
         this.dependsOn = new HashMap<>();
-        this.dependsOnIt = new HashMap<>();
         this.onSites = initializeOnSites();
         this.currentInstruction = instruction;
     }
@@ -65,6 +67,11 @@ public class Transaction {
     }
 
 
+    /**
+     * Keeps track of the transaction's current dependecies
+     * @param varId - Variable Id
+     * @param t - Transaction object
+     */
     public void addToDependsOn(String varId, Transaction t) {
         if(dependsOn.get(varId) != null) {
             dependsOn.get(varId).add(t);
@@ -76,39 +83,32 @@ public class Transaction {
     }
 
 
-    public void addToDependsOnIt(String varId, Transaction t) {
-        if(dependsOnIt.get(varId) != null) {
-            dependsOnIt.get(varId).add(t);
-        } else {
-            LinkedList<Transaction> temp = new LinkedList<>();
-            temp.add(t);
-            dependsOnIt.put(varId, temp);
-        }
-    }
-
-
+    /**
+     * Gets transaction's current depends on list
+     */
     public HashMap<String, LinkedList<Transaction>> getDependsOn() {
         return dependsOn;
     }
 
 
+    /**
+     * Check if a transaction currently depends on anything
+     */
     public Boolean checkDependsOn() {
         return (dependsOn.size() > 0);
     }
 
 
+    /**
+     * Removes a variable dependency
+     * @param varId - variable Id
+     */
     public void removeFromDependsOn(String varId) {
         if(dependsOn.get(varId) != null) {
             dependsOn.remove(varId);
         }
     }
 
-
-    public void removeFromDependsOnIt(String varId) {
-        if(dependsOnIt.get(varId) != null) {
-            dependsOnIt.remove(varId);
-        }
-    }
 
     /**
      * Checks whether transaction is read only
@@ -118,13 +118,15 @@ public class Transaction {
         return readOnly;
     }
 
+
     /**
      * Returns the start time of a transaction
-     * @return Integer - start time
+     * @return int - start time
      */
-    public Integer getStartTime() {
+    public int getStartTime() {
         return startTime;
     }
+
 
     /**
      * Adds the current instruction object to the transaction
@@ -134,6 +136,7 @@ public class Transaction {
         currentInstruction = instruction;
     }
 
+
     /**
      * Returns the current instruction object
      * @return Instruction - instruction object
@@ -142,6 +145,7 @@ public class Transaction {
         return currentInstruction;
     }
 
+
     /**
      * Adds variable ID to locked variables
      * @param varId - string variable ID
@@ -149,6 +153,7 @@ public class Transaction {
     public void addLockedVariable(String varId) {
         variablesLocked.add(varId);
     }
+
 
     /**
      * Queue for variables that are locked
@@ -168,6 +173,7 @@ public class Transaction {
         variablesLockType.put(varId, instruction);
     }
 
+
     /**
      * Removes a variable from lock variable from Queue
      * @param varId - variable id
@@ -185,6 +191,7 @@ public class Transaction {
         variablesLocked = temp;
     }
 
+
     /**
      * Removes a variable from lock variable type HashMap
      * @param varId - variable id
@@ -193,6 +200,7 @@ public class Transaction {
         variablesLockType.remove(varId);
     }
 
+
     /**
      * Gets lock type info
      * @param varId - variable id
@@ -200,6 +208,7 @@ public class Transaction {
     public Instruction getLockedVariableInfo(String varId) {
         return variablesLockType.get(varId);
     }
+
 
     /**
      * Checks lock type info
@@ -213,12 +222,14 @@ public class Transaction {
         }
     }
 
+
     /**
      * Changes transaction status to not running
      */
     public void stopTransaction() {
         running = false;
     }
+
 
     /**
      * A check to see whether a transaction is still running
@@ -228,6 +239,7 @@ public class Transaction {
         return running;
     }
 
+
     /**
      * Returns a HashMap of all the sites the transaction is on
      * @return HashMap - HashMap of sites the transaction is on
@@ -235,6 +247,7 @@ public class Transaction {
     public HashMap<Integer, Integer> getOnSites() {
         return onSites;
     }
+
 
     /**
      * Initializes the onSite HashMap.  Value is incremented/decremented
@@ -251,6 +264,7 @@ public class Transaction {
         return temp;
     }
 
+
     /**
      * Increments the value in onSites HashMap when a transaction is on
      * a site
@@ -258,6 +272,7 @@ public class Transaction {
     public void plusOnSites(int siteId) {
         onSites.put(siteId, onSites.get(siteId) + 1);
     }
+
 
     /**
      * Decrements the value in onSites HashMap when a transaction is off
@@ -267,9 +282,6 @@ public class Transaction {
         onSites.put(siteId, onSites.get(siteId) - 1);
     }
 
-    public HashMap<String, Instruction> getVariablesLockType() {
-        return variablesLockType;
-    }
 
     /**
      * toString method for a transaction object

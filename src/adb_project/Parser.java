@@ -8,14 +8,18 @@
  * @since   07-12-2017
  */
 
+
 package adb_project;
+
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
+
 public class Parser {
+
 
     /**
      * Gets the number from a string.  Mostly to handle the x#
@@ -26,6 +30,7 @@ public class Parser {
         return Integer.parseInt(getInt.replaceAll("\\D+",""));
     }
 
+
     /**
      * Breaks up an input line into an array of strings
      * @param instruction - string input that has paranthesis and commas separating
@@ -35,6 +40,7 @@ public class Parser {
     private String[] parseInstruction (String instruction)  {
         return instruction.split("[\\(\\,\\,\\)]");
     }
+
 
     /**
      * Breaks up an input line into an array of strings

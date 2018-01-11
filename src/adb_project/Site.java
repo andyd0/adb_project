@@ -9,7 +9,12 @@
 
 package adb_project;
 
-import java.util.*;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
 
 public class Site {
 
@@ -17,6 +22,7 @@ public class Site {
     private HashMap<String, Variable> variables;
     private HashMap<String, HashMap<Transaction, Instruction>> lockTable;
     private String state;
+
 
     /**
      * Creates a Site object
@@ -49,6 +55,7 @@ public class Site {
         }
     }
 
+
     /**
      * Sets the current state of a transaction
      * @param state - string of site's current state
@@ -56,6 +63,7 @@ public class Site {
     public void setSiteState(String state) {
         this.state = state;
     }
+
 
     /**
      * Gets the current state of a site
@@ -65,6 +73,7 @@ public class Site {
         return state;
     }
 
+
     /**
      * Gets the site ID
      * @return Integer - gets the site ID
@@ -73,6 +82,7 @@ public class Site {
         return id;
     }
 
+
     /**
      * HashMap of all variables on this site
      * @return HashMap
@@ -80,6 +90,7 @@ public class Site {
     public HashMap<String, Variable> getAllVariables() {
         return variables;
     }
+
 
     /**
      * Gets specific variable by supplying its id
@@ -90,13 +101,14 @@ public class Site {
         return variables.get(id);
     }
 
+
     /**
      * Updates a variable's value at transaction commit
      * @param id - variable ID string
      * @param value - value of variable
      * @param time - time when variable was updated
      */
-    public void updateVariable(String id, Integer value, Integer time) {
+    private void updateVariable(String id, Integer value, int time) {
         variables.get(id).updateValue(value, time);
         variables.get(id).valueCommitted();
         if(!variables.get(id).getOkToRead()) {
@@ -104,9 +116,15 @@ public class Site {
         }
     }
 
+
+    /**
+     * Get lock table size for variable
+     * @param id - variable Id
+     */
     public int getLockCount(String id) {
         return lockTable.get(id).size();
     }
+
 
     /**
      * Adds a transaction to a variable's lock table HashMap
@@ -119,6 +137,7 @@ public class Site {
         t.plusOnSites(this.id);
     }
 
+
     /**
      * When a transaction commits, checks to see if it was a write instruction and updates value.
      * For both R/W it will remove from lock queue
@@ -126,7 +145,7 @@ public class Site {
      * @param varId - variable ID
      * @param time - time when variable is updated
      */
-    public Integer handleLockTable(Transaction t, String varId, Integer time) {
+    public Integer handleLockTable(Transaction t, String varId, int time) {
         Instruction instruction = lockTable.get(varId).get(t);
         Boolean updated = false;
         if(instruction.getInstruction().equals("W")) {
@@ -143,6 +162,7 @@ public class Site {
             return null;
         }
     }
+
 
     /**
      * Checks to see whether a variable is write locked.  Really just to handle
@@ -164,18 +184,6 @@ public class Site {
         }
     }
 
-    public boolean isVariableReadLocked(String varId) {
-
-        if(lockTable.size() != 0 && lockTable.get(varId).size() != 0) {
-            if (lockTable.get(varId).entrySet().iterator().next().getValue().getInstruction().equals("R")) {
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
 
     /**
      * Checks to see whether a variable is locked.
@@ -186,6 +194,7 @@ public class Site {
         return ((lockTable.size() != 0) && (lockTable.get(varId).size() != 0));
     }
 
+
     /**
      * Clears the lock table when a site fails
      */
@@ -193,7 +202,7 @@ public class Site {
         this.lockTable = new HashMap<>();
     }
 
-    // TODO: This should not create a table for all 20 variables.  Just relevant ones
+
     /**
      * Initializes lock table
      * @return HashMap - Nested HashMap - variable and it's transaction / instruction
@@ -202,19 +211,18 @@ public class Site {
 
         HashMap<String, HashMap<Transaction, Instruction>> temp = new HashMap<>();
 
+        // Only adds applicable variables to the site
         for (int i = 1; i <= 20; i++) {
-            temp.put("x" + i, new HashMap<>());
+            if (i % 2 == 0) {
+                temp.put("x" + i, new HashMap<>());
+            } else if ((1 + i % 10) == id) {
+                temp.put("x" + i, new HashMap<>());
+            }
         }
-//        // Only adds applicable variables to the site
-//        for (int i = 1; i <= 20; i++) {
-//            if (i % 2 == 0) {
-//                temp.put("x" + i, new HashMap<>());
-//            } else if ((1 + i % 10) == id) {
-//                temp.put("x" + i, new HashMap<>());
-//            }
-//        }
+
         return temp;
     }
+
 
     /**
      * Returns a set of transactions that have locks on a site
@@ -231,6 +239,10 @@ public class Site {
     }
 
 
+    /**
+     * Gets the transactions locked on a variable
+     * @param varId - variable ID
+     */
     public Set<Transaction> getTransactionsLockedOnVariable(String varId){
         Set<Transaction> lockedTransactions = new HashSet<>();
         HashMap<Transaction, Instruction> transactions = this.lockTable.get(varId);
@@ -243,6 +255,7 @@ public class Site {
         }
         return lockedTransactions;
     }
+
 
     /**
      * Removes a transaction from the site's lock table
@@ -260,13 +273,15 @@ public class Site {
         }
     }
 
+
     /**
      * Count of variables on the site
      * @return Integer - count of variables on the site
      */
-    public Integer getVariableCount() {
+    public int getVariableCount() {
         return variables.size();
     }
+
 
     /**
      * When a site is recoved, variables are set to whether they can be
@@ -284,6 +299,7 @@ public class Site {
         }
         lockTable = initializeLockTable();
     }
+
 
     /**
      * toString method for a site object

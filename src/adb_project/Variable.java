@@ -7,11 +7,14 @@
  * @since   07-12-2017
  */
 
+
 package adb_project;
 
 import java.util.HashMap;
 
+
 public class Variable {
+
     private String id;
     private int value;
     private HashMap<Integer, Integer> previousValues;
@@ -32,6 +35,7 @@ public class Variable {
         this.okToRead = true;
     }
 
+
     /**
      * Initializese the HashMap that keeps track of previous values
      * of the variable
@@ -43,6 +47,7 @@ public class Variable {
         return temp;
     }
 
+
     /**
      * Gets the current value of a variable
      * @return int - current value of variable
@@ -51,11 +56,12 @@ public class Variable {
         return this.value;
     }
 
+
     /**
      * Gets the previous value of a variable based on time
      * @param time - when it was updated
      */
-    public int getPreviousValue(Integer time) {
+    public int getPreviousValue(int time) {
 
         HashMap<Integer, Integer> temp = this.previousValues;
         Integer value = -1;
@@ -68,6 +74,7 @@ public class Variable {
         return value;
     }
 
+
     /**
      * Updates a variable with new value while storing
      * it in previous values with time
@@ -79,14 +86,16 @@ public class Variable {
         this.value = value;
     }
 
+
     /**
      * Sets whether it's ok to read a variable after
      * a site failure - just for even variables
-     * @param okNotOk
+     * @param okNotOk - Boolean field
      */
     public void setOkToRead(Boolean okNotOk) {
         okToRead = okNotOk;
     }
+
 
     /**
      * Checks whether it's ok to read a variable after
@@ -96,12 +105,14 @@ public class Variable {
         return okToRead;
     }
 
+
     /**
      * Sets whether a value has been committed
      */
     public void valueCommitted() {
         committed = true;
     }
+
 
     /**
      * Checks whether the variable has been committed
@@ -110,6 +121,7 @@ public class Variable {
     public Boolean checkCommitted() {
         return committed;
     }
+
 
     /**
      * toString method for a variable object

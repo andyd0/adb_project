@@ -25,7 +25,7 @@ public class TM {
     private HashMap<Integer, Transaction> transactionList;
     private static HashMap<String, Queue<Transaction>> lockQueue;
     private static HashMap<Integer, Queue<Transaction>> waitQueue;
-    private static Integer time = 0;
+    private static int time = 0;
 
     /**
      * Creates a Task Manager Object.  Holds the instructions,
@@ -45,10 +45,10 @@ public class TM {
      * @param id - id of transaction
      * @param readOnly - whether the transaction is read only
      * @param startTime - when the transaction was created
-     * @param instruction - instruction object for transaction
+     * @param I - instruction object for transaction
      */
-    private void addTransaction(Integer id, Boolean readOnly, Integer startTime, Instruction instruction) {
-        Transaction T = new Transaction(id, readOnly, startTime, instruction);
+    private void addTransaction(Integer id, Boolean readOnly, int startTime, Instruction I) {
+        Transaction T = new Transaction(id, readOnly, startTime, I);
         addToTransactionList(id, T);
     }
 
@@ -83,9 +83,9 @@ public class TM {
 
     /**
      * Gets the current time during processing
-     * @return Integer - time
+     * @return int - time
      */
-    public static Integer getTime() {
+    public static int getTime() {
         return time;
     }
 
@@ -107,29 +107,39 @@ public class TM {
             // Since the instruction list may have instructions for terminated
             // transactions, a check is added to continue if one is found
             switch (instruction_type) {
+
                 case "begin":
                     begin(instruction);
                     break;
+
                 case "beginRO":
                     begin(instruction);
                     break;
+
                 case "W":
                     id = instruction.getId();
                     transaction = this.getTransaction(id);
 
+                    // Instructions may still come for a transaction that is no longer
+                    // runnning due to abort
                     if(!transaction.isRunning()) {
                         continue;
                     }
 
                     transaction.addCurrentInstruction(instruction);
-                    if(!dm.deadLockCheck(transaction, instruction) || transaction.isRunning())
+                    if(transaction.isRunning())
                         dm.write(transaction, instruction);
 
+                    dm.deadLockCheck(transaction);
+
                     break;
+
                 case "R":
                     id = instruction.getId();
                     transaction = this.getTransaction(id);
 
+                    // Instructions may still come for a transaction that is no longer
+                    // runnning due to abort
                     if(!transaction.isRunning()) {
                         continue;
                     }
@@ -137,33 +147,44 @@ public class TM {
                     transaction.addCurrentInstruction(instruction);
 
                     if(!dm.hasWriteLock(transaction, instruction)) {
-                        if (!transaction.isReadOnly() && !dm.deadLockCheck(transaction, instruction))
+                        if (!transaction.isReadOnly())
                             dm.read(transaction, instruction);
                         else
                             dm.read(transaction, instruction);
                     }
+
+                    dm.deadLockCheck(transaction);
+
                     break;
+
                 case "fail":
                     id = instruction.getId();
-                    abort(id);
+                    failSite(id);
                     dm.fail(instruction);
                     break;
+
                 case "recover":
                     dm.recover(instruction);
                     break;
+
                 case "dump":
                     dm.dump();
                     break;
+
                 case "dumpx":
                     dm.dump("x" + instruction.getValue().toString());
                     break;
+
                 case "dumpi":
                     dm.dump(instruction.getValue());
                     break;
+
                 case "end":
                     id = instruction.getId();
                     transaction = this.getTransaction(id);
 
+                    // Instructions may still come for a transaction that is no longer
+                    // runnning due to abort
                     if(!transaction.isRunning()) {
                         continue;
                     }
@@ -177,15 +198,15 @@ public class TM {
 
     /**
      * Sets up a transaction
-     * @param instruction - an instruction object
+     * @param I - an instruction object
      */
-    public void begin(Instruction instruction) {
+    public void begin(Instruction I) {
 
-        Integer startTime = getTime();
-        Integer transaction = instruction.getId();
-        Boolean readOnly = instruction.getInstruction().contains("RO");
+        int startTime = getTime();
+        Integer transaction = I.getId();
+        Boolean readOnly = I.getInstruction().contains("RO");
 
-        addTransaction(transaction, readOnly, startTime, instruction);
+        addTransaction(transaction, readOnly, startTime, I);
     }
 
 
@@ -211,15 +232,15 @@ public class TM {
     /**
      * Adds a transaction to a sites wait queue when the site is unavailable
      * @param siteId - site ID
-     * @param transaction - a transaction object
+     * @param T - a transaction object
      */
-    public static void addToWaitQueue(Integer siteId, Transaction transaction) {
+    public static void addToWaitQueue(Integer siteId, Transaction T) {
         if(waitQueue.get(siteId) == null) {
             Queue<Transaction> queue = new LinkedList<>();
-            queue.add(transaction);
+            queue.add(T);
             waitQueue.put(siteId, queue);
         } else {
-            waitQueue.get(siteId).add(transaction);
+            waitQueue.get(siteId).add(T);
         }
     }
 
@@ -244,16 +265,16 @@ public class TM {
     /**
      * Adds a a transaction to a variable lock queue
      * a transaction object
-     * @param variableId - variable id
+     * @param varId - variable id
      * @param T - transaction object
      */
-    public static void addToLockQueue(String variableId, Transaction T) {
-        if(lockQueue.get(variableId) == null) {
+    public static void addToLockQueue(String varId, Transaction T) {
+        if(lockQueue.get(varId) == null) {
             Queue<Transaction> queue = new LinkedList<>();
             queue.add(T);
-            lockQueue.put(variableId, queue);
+            lockQueue.put(varId, queue);
         } else {
-            lockQueue.get(variableId).add(T);
+            lockQueue.get(varId).add(T);
         }
     }
 
@@ -262,36 +283,31 @@ public class TM {
      * Gets the instruction at the start of the start of the queue.  This is to
      * handle cases where an unlock a variable may have more than one transaction
      * waiting to read lock it
-     * @param variableId - variable id
+     * @param varId - variable id
      * @return String - instruction type
      */
-    public static String peekLockQueue(String variableId) {
-        if(lockQueue.get(variableId).peek() == null) {
+    public static String peekLockQueue(String varId) {
+        if(lockQueue.get(varId).peek() == null) {
             return "N";
         } else {
-            return lockQueue.get(variableId).peek().getCurrentInstruction().getInstruction();
+            return lockQueue.get(varId).peek().getCurrentInstruction().getInstruction();
         }
     }
 
 
-    public static Set<Transaction> getTransactionsFromLockQueue(String variable) {
-        if(lockQueue.get(variable) != null) {
-            Queue<Transaction> transactions = new LinkedList<>(lockQueue.get(variable));
+    /**
+     * Gets trasnsactions in lock queue for specific variable
+     * @param varId - variable id
+     * @return String - instruction type
+     */
+    public static Set<Transaction> getTransactionsFromLockQueue(String varId) {
+        if(lockQueue.get(varId) != null) {
+            Queue<Transaction> transactions = new LinkedList<>(lockQueue.get(varId));
             Set<Transaction> transactionSet = new HashSet<>();
             while (!transactions.isEmpty()) {
                 transactionSet.add(transactions.remove());
             }
             return transactionSet;
-        } else {
-            return null;
-        }
-    }
-
-
-    public static Queue<Transaction> getLockQueue(String variable) {
-        if(lockQueue.get(variable) != null) {
-            Queue<Transaction> transactions = new LinkedList<>(lockQueue.get(variable));
-            return transactions;
         } else {
             return null;
         }
@@ -313,7 +329,7 @@ public class TM {
      * failure
      * @param id - transaction id
      */
-    private void abort(Integer id) {
+    private void failSite(Integer id) {
         for (HashMap.Entry<Integer, Transaction> entry : transactionList.entrySet())
         {
             HashMap<Integer, Integer> sites = entry.getValue().getOnSites();
@@ -328,7 +344,12 @@ public class TM {
     }
 
 
-    public static void abort(Transaction T) {
+    /**
+     * Aborts a transaction - removes transaction from lock and wait queues and
+     * puts it into terminated state
+     * @param T - transaction
+     */
+    public static void abortTransaction(Transaction T) {
 
         // Remove from variable lock queue
         for(HashMap.Entry<String, Queue<Transaction>> locks : lockQueue.entrySet()) {

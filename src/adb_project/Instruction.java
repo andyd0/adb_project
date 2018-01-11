@@ -7,14 +7,17 @@
  * @since   07-12-2017
  */
 
+
 package adb_project;
+
 
 public class Instruction {
 
     private String instruction;
     private Integer id;
     private Integer variable;
-    private Integer value = null;
+    private Integer value;
+
 
     /**
      * Creates an Instruction object
@@ -30,6 +33,7 @@ public class Instruction {
         this.value = value;
     }
 
+
     /**
      * Gets the instruction type
      * @return String - instruction type
@@ -37,6 +41,7 @@ public class Instruction {
     public String getInstruction() {
         return instruction;
     }
+
 
     /**
      * Gets transaction ID
@@ -46,6 +51,7 @@ public class Instruction {
         return id;
     }
 
+
     /**
      * Gets variable ID
      * @return Integer - variable ID
@@ -54,6 +60,7 @@ public class Instruction {
         return variable;
     }
 
+
     /**
      * Gets value of variable
      * @return Integer - value of variable
@@ -61,6 +68,7 @@ public class Instruction {
     public Integer getValue() {
         return value;
     }
+
 
     /**
      * toString method for instruction object
